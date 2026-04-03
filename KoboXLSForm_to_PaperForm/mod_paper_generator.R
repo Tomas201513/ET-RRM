@@ -399,7 +399,7 @@ mod_paper_form_generator_server <- function(id) {
           openxlsx::mergeCells(wb, "paperEnglish", rows = 3, cols = 1)
           openxlsx::writeData(wb, "paperEnglish", titleQues, startRow = 3, startCol = 1)
           openxlsx::addStyle(wb, "paperEnglish", titleStyle, rows = 3, cols = 1)
-          openxlsx::setRowHeights(wb, "paperEnglish", rows = 3, heights = 30)
+          openxlsx::setRowHeights(wb, "paperEnglish", rows = 3, heights = 45)
           
           currentRow <- 5
           skip_next_other_specify <- FALSE
@@ -655,7 +655,6 @@ mod_paper_form_generator_server <- function(id) {
       },
       contentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
-    
     output$download_admin <- downloadHandler(
       filename = function() {
         paste0("admin_list.xlsx")
@@ -666,12 +665,40 @@ mod_paper_form_generator_server <- function(id) {
           return(NULL)
         }
         
-        # Show loading state
         session$sendCustomMessage("showDownloadLoading", list(button_id = ns("download_admin")))
         
         tryCatch({
-          openxlsx::write.xlsx(values$admin_df, file)
+          
+          # Create workbook
+          wb <- openxlsx::createWorkbook()
+          openxlsx::addWorksheet(wb, "Admin_List")
+          
+          # Write as Excel table
+          openxlsx::writeDataTable(
+            wb,
+            sheet = "Admin_List",
+            x = values$admin_df,
+            startRow = 1,
+            startCol = 1,
+            tableStyle = "TableStyleMedium9"  # nice built-in style
+          )
+          
+          # Auto column width
+          openxlsx::setColWidths(
+            wb,
+            sheet = "Admin_List",
+            cols = 1:ncol(values$admin_df),
+            widths = "auto"
+          )
+          
+          # Freeze header row
+          openxlsx::freezePane(wb, "Admin_List", firstRow = TRUE)
+          
+          # Save workbook
+          openxlsx::saveWorkbook(wb, file, overwrite = TRUE)
+          
           showNotification("Admin list downloaded successfully!", type = "message", duration = 3)
+          
         }, error = function(e) {
           showNotification(paste("Error:", e$message), type = "error", duration = 3)
         }, finally = {
@@ -679,7 +706,6 @@ mod_paper_form_generator_server <- function(id) {
         })
       }
     )
-    
     # Return reactive values if needed for parent module
     return(list(
       generated = reactive({ values$generated }),

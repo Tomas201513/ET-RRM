@@ -15,8 +15,14 @@ library(stringr)
 library(processx)
 library(shinycssloaders)
 library(jsonlite)
-library(janitor)
+# library(janitor)
+
 library(openxlsx)
+library(purrr)
+library(tidyr)
+library(cleaningtools)
+library(crayon)
+library(qdapRegex)
 
 # Source all R modules
 source("Kobo_XLSForm_Validator/R/utils/config.R")
@@ -35,6 +41,9 @@ source("Kobo_XLSForm_Validator/R/custom_rules/choice_list_validation.R")
 source("Kobo_XLSForm_Validator/R/custom_rules/comparisons.R")
 source("Kobo_XLSForm_Validator/R/custom_rules/cross_sheet_refs.R")
 source("Kobo_XLSForm_Validator/R/custom_rules/no_spaces_inside.R")
+source("Data_Cleaning/cleaning_log_generator/data_cleaning_log.R")
+source("Data_Cleaning/cleaning_log_generator/utility_cleaning_log.R")
+source("Data_Cleaning/cleaning_log_validator/check_cleaning_log.R")
 
 # Source Shiny modules
 source("Kobo_XLSForm_Validator/modules/mod_upload.R")
@@ -44,6 +53,8 @@ source("Kobo_XLSForm_Validator/modules/mod_export.R")
 source("Kobo_XLSForm_Validator/modules/mod_rule_config.R")
 source("Kobo_XLSForm_Validator/modules/mod_cleaning_panel.R")
 source("KoboXLSForm_to_PaperForm/mod_paper_generator.R")
+
+
 
 # Application configuration
 app_config <- get_config()
@@ -329,7 +340,7 @@ ui <- bslib::page_navbar(
                 # div(class = "card-header", icon("info-circle"), "Custom Validation Rules (28 total):"),
                 div(class = "card-body",
                     style = "height: 60vh;",
-                    h6("Custom Validation Tool:"),
+                  
                     
                     h6("Steps to Use the Validator:"),
                     tags$ol(
@@ -454,22 +465,116 @@ ui <- bslib::page_navbar(
     )
   ),
   
-  # ==================== MAIN TAB 2: New Empty Tab ====================
-  # In your main app.R file, update the "New Tab" section:
-  
+
   # ==================== MAIN TAB 2: Paper Form Generator ====================
   bslib::nav_panel(
     title = "Paper Form Generator",
     icon = icon("file-alt"),
     add_loading_js(),
     mod_paper_form_generator_ui("paper_form")
+  ),
+  
+  
+  bslib::nav_panel(
+    title = "Data Quality",
+    icon = icon("chart-bar"),
+    bslib::navset_card_tab(
+      id = "data_quality_sub_tabs",
+      
+      # ---------- Sub-tab 1: About ----------
+      bslib::nav_panel(
+        title = "About",
+        icon = icon("info-circle"),
+        h2("About Data Quality"),
+      ),
+      nav_panel(
+        title = "Cleaning Log Generator",
+        icon = icon("file-alt"),
+        add_loading_js(),
+        mod_cleaning_log_generator_ui("cleaning_log")
+      ),
+      nav_panel(
+        title = "Cleaning Log validation",
+        icon = icon("file-alt"),
+        add_loading_js(),
+        # Cleaning Log Reviewr UI
+        bslib::nav_panel(
+          title = "Cleaning Log Reviewer",
+          icon = shiny::icon("check"),
+          
+          # =======================
+          # TOP TOOLBAR (HORIZONTAL)
+          # =======================
+          
+          bslib::layout_columns(
+            col_widths = c(4, 4, 2, 2),
+            
+            fileInput(
+              "kobo_file",
+              label = NULL,  # corrected spelling
+              placeholder = "upload kobo xlsform...",
+              accept = c(".xlsx", ".xls", ".xlsm")
+            ),
+            
+            fileInput(
+              "cl_file",
+              label = NULL,  # corrected spelling
+              placeholder = "upload cleaning log file...",
+              accept = c(".xlsx", ".xls", ".xlsm")
+            )
+            ,
+            actionButton(
+              "run_check",
+              "Run Validation",
+              icon = icon("play"),
+              class = "btn-primary w-100"
+            ),
+            
+            downloadButton(
+              "download_log",
+              "Download Log",
+              class = "btn-success w-100"
+            )
+            
+          ),
+          
+          # =======================
+          # STATUS + TABLE (BOTTOM)
+          # =======================
+          bslib::card(
+            full_screen = TRUE,
+            min_height = "400px",
+            
+            bslib::card_header(
+              # shiny::icon("clipboard-check"),
+              # "Validation Results",
+              uiOutput("status")
+            ),
+            
+            bslib::card_body(
+              DTOutput("log_table") %>% shinycssloaders::withSpinner(
+                type = 8,
+                color = "#F6F4F0",
+                size = 1
+              )
+            )
+          )
+        )
+      ),
+      nav_panel(
+        title = "Data cleaning tools",
+        icon = icon("file-alt"),
+        add_loading_js(),
+        h2("Data Cleaning Tools Coming Soon!")
+      )
+    )
   )
 
 )
 
 # Server Definition
 server <- function(input, output, session) {
-  
+  mod_cleaning_log_generator_server("cleaning_log")
   # ==================== Paper Form Generator Module ====================
   mod_paper_form_generator_server("paper_form")
   
@@ -677,6 +782,218 @@ server <- function(input, output, session) {
       )
     }
   })
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  # Cleaning log validator ######################################################
+  result <- reactiveVal(NULL)
+  is_running <- reactiveVal(FALSE)
+  
+  observeEvent(input$run_check, {
+    
+    req(input$kobo_file, input$cl_file)
+    
+    is_running(TRUE)   # ⬅️ START loading
+    result(NULL)       # clear previous results
+    
+    shiny::withProgress(
+      message = "Running cleaning log validation...",
+      value = 0, {
+        
+        tryCatch({
+          
+          incProgress(0.2, detail = "Reading XLSForm...")
+          
+          survey_df  <- read_xlsx(input$kobo_file$datapath, sheet = "survey")
+          choices_df <- read_xlsx(input$kobo_file$datapath, sheet = "choices")
+          
+          incProgress(0.4, detail = "Reading cleaning log...")
+          
+          cleaning_log_df <- read_xlsx(input$cl_file$datapath, sheet = "cleaning_log")
+          
+          incProgress(0.7, detail = "Validating cleaning log...")
+          
+          res <- check_cleaning_log(
+            survey_df = survey_df,
+            choices_df = choices_df,
+            cleaning_log_df = cleaning_log_df,
+            cl_cols = list(
+              uuid = "uuid",
+              question = "question",
+              old_value = "old_value",
+              change_type = "change_type",
+              new_value = "new_value"
+            ),
+            header_rows_cleaning_log = 1L,
+            token_split_pattern = "[\\s,]+"
+          )
+          
+          incProgress(1)
+          
+          result(res)
+          
+        }, error = function(e) {
+          showNotification(e$message, type = "error", duration = NULL)
+        })
+        
+      } # <-- closes withProgress body
+    )
+    
+    is_running(FALSE)  # ⬅️ END loading
+    
+  }) # <-- closes observeEvent
+  
+  
+  # Status text
+  output$status <- renderUI({
+    if (is_running()) {
+      tagList(
+        shiny::icon("spinner", class = "fa-spin"),
+        " Running validation..."
+      )
+    } else {
+      res <- result()
+      if (is.null(res)) return("Validation Result")
+      
+      if (res$valid) {
+        "✅ Cleaning log is VALID. No issues found."
+      } else {
+        paste0("❌ Cleaning log has ", nrow(res$log), " issue(s).")
+      }
+    }
+  })
+  
+  
+  # Log table
+  output$log_table <- renderDT({
+    if (is_running()) return(NULL)
+    
+    res <- result()
+    if (is.null(res)) return(NULL)
+    
+    df <- res$log
+    # Define colors per rule_id
+    rule_colors <- c(
+      
+      CL_INVALID_CHANGE_TYPE        = "#F3BEBD", 
+      CL_NEW_VALUE_NOT_ALLOWED      = "#F1F1F1", 
+      CL_QUESTION_NOT_IN_SURVEY     = "#F6E3E3", 
+      CL_INVALID_SLASH_USAGE        = "#E7F3F9",
+      CL_SELECT_MULTIPLE_BAD_CHOICE = "#F4F0E8", 
+      CL_DUPLICATE_ACTION           = "#DAD9D9", 
+      CL_REMOVE_SURVEY_CONFLICT     = "#FFF0CC", 
+      CL_QUESTION_MISSING           = "#EAF4EA", 
+      CL_SELECT_ONE_BAD_CHOICE      = "#EDE7F6", 
+      CL_NUMERIC_NOT_NUMBER         = "#E6DDCA"  
+      
+      
+    )
+    
+    datatable(
+      df,
+      options = list(
+        pageLength = 5,
+        scrollX = TRUE,
+        columnDefs = list(
+          list(
+            targets = which(names(df) == "rule_id") - 1,  # 0-based index
+            visible = FALSE
+          )
+        )
+      ),
+      rownames = FALSE
+    ) %>%
+      formatStyle(
+        columns = names(df),          # apply to whole row
+        valueColumns = "rule_id",     # still available for styling
+        backgroundColor = styleEqual(
+          names(rule_colors),
+          unname(rule_colors)
+        )
+      )
+    
+  })
+  
+  
+  # Download log
+  output$download_log <- downloadHandler(
+    filename = function() {
+      paste0("cleaning_log_validation_", Sys.Date(), ".xlsx")
+    },
+    content = function(file) {
+      res <- result()
+      if (is.null(res)) return(NULL)
+      
+      df <- res$log
+      
+      wb <- openxlsx::createWorkbook()
+      openxlsx::addWorksheet(wb, "Validation Log")
+      
+      openxlsx::writeData(wb, "Validation Log", df)
+      
+      # Define colors per rule_id
+      rule_colors <- c(
+        CL_INVALID_CHANGE_TYPE        = "#F3BEBD", 
+        CL_NEW_VALUE_NOT_ALLOWED      = "#F1F1F1", 
+        CL_QUESTION_NOT_IN_SURVEY     = "#F6E3E3", 
+        CL_INVALID_SLASH_USAGE        = "#E7F3F9",
+        CL_SELECT_MULTIPLE_BAD_CHOICE = "#F4F0E8", 
+        CL_DUPLICATE_ACTION           = "#DAD9D9", 
+        CL_REMOVE_SURVEY_CONFLICT     = "#FFF0CC", 
+        CL_QUESTION_MISSING           = "#EAF4EA", 
+        CL_SELECT_ONE_BAD_CHOICE      = "#EDE7F6", 
+        CL_NUMERIC_NOT_NUMBER         = "#E6DDCA"  
+      )
+      
+      # Apply row styles
+      for (rule in names(rule_colors)) {
+        rows <- which(df$rule_id == rule) + 1  # +1 for header row
+        
+        if (length(rows) > 0) {
+          style <- openxlsx::createStyle(
+            fgFill = rule_colors[[rule]]
+          )
+          
+          openxlsx::addStyle(
+            wb,
+            sheet = "Validation Log",
+            style = style,
+            rows = rows,
+            cols = 1:ncol(df),
+            gridExpand = TRUE,
+            stack = TRUE
+          )
+        }
+      }
+      
+      # Optional: make header bold
+      header_style <- openxlsx::createStyle(textDecoration = "bold")
+      openxlsx::addStyle(
+        wb,
+        "Validation Log",
+        style = header_style,
+        rows = 1,
+        cols = 1:ncol(df),
+        gridExpand = TRUE
+      )
+      
+      openxlsx::setColWidths(
+        wb,
+        "Validation Log",
+        cols = 1:ncol(df),
+        widths = "auto"
+      )
+      
+      openxlsx::saveWorkbook(wb, file, overwrite = TRUE)
+    }
+  )
+  
   
 }
 
