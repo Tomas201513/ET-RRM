@@ -1,0 +1,69 @@
+#############################################################################################################
+# .Renviron is a user-controllable file that can be used to create environment variables. 
+# This is especially useful to avoid including credentials like API keys inside R scripts.
+
+# readRenviron("E:/ET-RRM/.Renviron")
+#############################################################################################################
+
+
+
+
+
+
+
+ 
+ 
+ 
+ 
+# kobo = "E:/msna_cleaning2/kobo_tool/REACH_2025_MSNA-kobo-tool_draft_et_FINAL_redeployed.xlsx"
+# raw_dataset =  "./raw_data/"
+# full_raw_dataset = "./raw_data/Multi-Sectoral_Needs_Assessment_MSNA_2025_-_all_versions_-_False_-_2025-09-01-18-18-42 (1).xlsx"
+# audits = "./audit/audit.zip"
+# audit_dir = "./audit/"
+# sample_dir ="./sample/"
+# 
+# fu_files_path_zipped = "./output/responses/follow-ups/zipped"
+# fu_files_path_unzipped = "./output/responses/follow-ups/unzipped"
+# 
+# fu_files_path = "./output/responses/follow-ups_edited.xlsx"
+# other_file_path = "./output/responses/other_responses_edited.xlsx"
+# deletion_file_path = "./output/responses/deletion_logs_edited.xlsx"
+# 
+# 
+# recurring_true_other = "output/checking/other_responses/recurring_true_other.xlsx"
+# 
+# combined_cleaning_log = "output/final/ETH2503_Data_cleaning_log.xlsx"
+# cleaning_logbook = "output/final/ETH2503_Data_cleaning_logbook.xlsx"
+# 
+# dl_full = "output/final/deletion_log.xlsx"
+# enumerator_log = "output/final/enumerator_log.xlsx"
+# variable_tracker = "output/final/variable_tracker.xlsx"
+# cleaned_data = "output/final/REACH_ETH_MSNA2025_cleaned_data.xlsx"
+# clean_dataset = "output/final/REACH_ETH_Dataset_MSNA_September2025.xlsx"
+# 
+# review_log_main = "./output/final/review_logmain.xlsx"
+# review_log_roster = "./output/final/review_log_roster.xlsx"
+# review_log_edu_ind = "./output/final/review_log_edu_ind.xlsx"
+# review_log_health_ind = "./output/final/review_log_health_ind.xlsx"
+# review_log_nut_ind = "./output/final/review_log_nut_ind.xlsx"
+# review_log_died_member = "./output/final/review_log_died_member.xlsx"
+# review_log_child = "./output/final/review_log_child.xlsx"
+# 
+# ##########################################mine
+# 
+# google_service_account ="R/msna2025monitoringdashboard-ecac4d609fe4.json"
+# 
+# `kobo_server_url`="https://kobo.impact-initiatives.org/"
+# dataurl ="https://kobo.impact-initiatives.org/api/v1/data.csv"
+# kobo_user = "tomas201513"
+# kobo_pw = "201513119T@m"
+# 
+# 
+# ####  Create a variable with the form id and create to dataurl link
+# form_id = "965004"
+# asset_uid = "aSvqoKPGhdXDPi3Aug9kfG"
+# 
+# 
+# payment ="./output/payment/HSM(R2) KI List for Airtime Top-up "
+# pii_pswd= "201513"
+# additional_checks="./output/checking/removed_surveys"

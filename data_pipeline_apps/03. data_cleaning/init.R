@@ -11,7 +11,7 @@ data_cleaningModuleUI <- function(id) {
     
     # ---------- Sub-tab 1: About ----------
     bslib::nav_panel(
-      title = "About",
+      title = "Info",
       icon = icon("info-circle"),
       p("This section provides tools for generating and validating cleaning logs, as well as performing data cleaning tasks. Use the tabs above to navigate through the different functionalities.")
     ),

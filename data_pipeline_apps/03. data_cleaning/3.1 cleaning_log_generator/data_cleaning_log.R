@@ -1,4 +1,13 @@
-source(here::here("data_pipeline_apps/03. data_cleaning/3.1 cleaning_log_generator/utility_cleaning_log.R"))
+source(
+  here::here(
+    "data_pipeline_apps/03. data_cleaning/3.1 cleaning_log_generator/utility_cleaning_log.R"
+  )
+)
+source(
+  here::here(
+    "local_packages/custom_create_xlsx_cleaning_log.R"
+  )
+)
 
 # Make sure to include all your helper functions in this file
 # UI Module
@@ -7,264 +16,225 @@ mod_cleaning_log_generator_ui <- function(id) {
   
   tagList(
     useShinyjs(),
-    tags$head(tags$style(
-      HTML(
-        "
-    .sidebar-card {
-      background: white;
-      border-radius: 8px;
-      padding: 20px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-      margin-bottom: 16px;
-    }
-    .step-badge {
-      display: inline-block;
-      background: #2c3e50;
-      color: white;
-      border-radius: 50%;
-      width: 24px; height: 24px;
-      text-align: center;
-      line-height: 24px;
-      font-size: 13px;
-      font-weight: bold;
-      margin-right: 6px;
-    }
-    .step-title { font-weight: 600; font-size: 15px; color: #2c3e50; }
-    .log-box {
-      background: #1e1e1e;
-      border-radius: 6px;
-      padding: 4px;
-      height: 220px;
-      overflow-y: auto;
-    }
-    .log-box pre {
-      background: transparent;
-      color: #d4d4d4;
-      font-family: monospace;
-      font-size: 12px;
-      margin: 0;
-      padding: 8px;
-      border: none;
-      white-space: pre-wrap;
-      word-break: break-all;
-      height: 100%;
-      overflow-y: auto;
-    }
-    .summary-card {
-      background: white; border-radius: 8px;
-      padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.07);
-      margin-bottom: 12px;
-    }
-    .metric-num { font-size: 32px; font-weight: 700; color: #2c3e50; }
-    .metric-lbl { font-size: 13px; color: #7f8c8d; }
-    .badge-check { background:#27ae60; color:white; padding:2px 8px; border-radius:12px; font-size:11px; }
-    .badge-warn  { background:#e67e22; color:white; padding:2px 8px; border-radius:12px; font-size:11px; }
-    .btn-run {
-      background-color:#2c3e50; border-color:#2c3e50; color:white;
-      width:100%; padding:12px; font-size:15px; font-weight:600;
-      border-radius:6px; transition:all 0.2s;
-    }
-    .btn-run:hover:not(:disabled) { background-color:#1a252f; }
-    .btn-run:disabled { opacity:0.55; cursor:not-allowed; }
-    .btn-dl {
-      background-color:#27ae60; border-color:#27ae60; color:white;
-      width:100%; padding:10px; font-size:14px; font-weight:600;
-      border-radius:6px; margin-top:6px;
-    }
-    .btn-dl:hover:not(:disabled) { background-color:#229954; }
-    .btn-dl:disabled { opacity:0.55; cursor:not-allowed; }
-    .tab-content { padding-top: 16px; }
-  "
-      )
-    )),
     
-    uiOutput(ns("summary_row")),
+    tags$head(tags$style(HTML("
+      .sidebar-card {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        margin-bottom: 16px;
+      }
+      .step-badge {
+        display: inline-block;
+        background: #2c3e50;
+        color: white;
+        border-radius: 50%;
+        width: 24px; height: 24px;
+        text-align: center;
+        line-height: 24px;
+        font-size: 13px;
+        font-weight: bold;
+        margin-right: 6px;
+      }
+      .step-title { font-weight: 600; font-size: 15px; color: #2c3e50; }
+      .log-box {
+        background: #1e1e1e;
+        border-radius: 6px;
+        padding: 4px;
+        height: 220px;
+        overflow-y: auto;
+      }
+      .log-box pre {
+        background: transparent;
+        color: #d4d4d4;
+        font-family: monospace;
+        font-size: 12px;
+        margin: 0;
+        padding: 8px;
+        border: none;
+        white-space: pre-wrap;
+        word-break: break-all;
+        height: 100%;
+        overflow-y: auto;
+      }
+      .summary-card {
+        background: white; border-radius: 8px;
+        padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+        margin-bottom: 12px;
+      }
+      .metric-num { font-size: 32px; font-weight: 700; color: #2c3e50; }
+      .metric-lbl { font-size: 13px; color: #7f8c8d; }
+      .badge-check { background:#27ae60; color:white; padding:2px 8px; border-radius:12px; font-size:11px; }
+      .badge-warn  { background:#e67e22; color:white; padding:2px 8px; border-radius:12px; font-size:11px; }
+      .btn-run {
+        background-color:#2c3e50; border-color:#2c3e50; color:white;
+        width:100%; padding:12px; font-size:15px; font-weight:600;
+        border-radius:6px;
+      }
+      .btn-dl {
+        background-color:#27ae60; border-color:#27ae60; color:white;
+        width:100%; padding:10px; font-size:14px; font-weight:600;
+        border-radius:6px; margin-top:6px;
+      }
+      .tab-content { padding-top: 16px; }
+    "))),
+    
+    
+    # =======================
+    # Upload Section
+    # =======================
     fluidRow(
-      # LEFT SIDEBAR
-      column(
-        4,
-        div(
-          class = "sidebar-card",
-          div(
-            span(class = "step-badge", "1"),
-            span(class = "step-title", "Raw Dataset")
-          ),
-          hr(style = "margin:10px 0;"),
-          fileInput(
-            ns("raw_file"),
-            NULL,
-            accept = c(".xlsx", ".xls"),
-            placeholder = "Single-sheet .xlsx",
-            buttonLabel = "Browse"
-          ),
-          helpText(
-            "Needs only one sheet with all raw data."
-          ),
-          uiOutput(ns("raw_info"))
-        )),
-      column(
-        4,
-        div(
-          class = "sidebar-card",
-          div(
-            span(class = "step-badge", "2"),
-            span(class = "step-title", "Logical Checks")
-          ),
-          hr(style = "margin:10px 0;"),
-          fileInput(
-            ns("checks_file"),
-            NULL,
-            accept = c(".xlsx", ".xls"),
-            placeholder = "logical_checks.xlsx",
-            buttonLabel = "Browse"
-          ),
-          helpText(
-            "Needs sheets: 'checks' (select_one) and 'checks_sm' (select_multiple)"
-          ),
-          uiOutput(ns("checks_info"))
-       ) ),
-      column(
-        4,
-        div(
-          class = "sidebar-card",
-          div(
-            span(class = "step-badge", "3"),
-            span(class = "step-title", "KoBo Form")
-          ),
-          hr(style = "margin:10px 0;"),
-          fileInput(
-            ns("kobo_file"),
-            NULL,
-            accept = c(".xlsx", ".xls"),
-            placeholder = "kobo_tool.xlsx",
-            buttonLabel = "Browse"
-          ),
-          helpText("Needs sheets: 'survey' and 'choices'"),
-          uiOutput(ns("kobo_info"))
-        ))
-      ),
-
-    fluidRow(
-      column(
-        3,
+      bslib::card(
+        fillable = TRUE,
+        bslib::card_header(icon("upload"), "Upload & Settings"),
         
-        div(
-          class = "sidebar-card",
-          div(
-            span(class = "step-badge", "4"),
-            span(class = "step-title", "Options")
-          ),
-          hr(style = "margin:10px 0;"),
-          textInput(ns("uuid_col"), "UUID column", value = "uuid"),
-          textInput(ns("index_col"), "Index column", value = "index")
-          )
-        ),
-      column(
-        3,
-          div(
-            class = "sidebar-card",
-            numericInput(
-              ns("strongness"),
-              "Outlier strongness factor",
-              value = 3,
-              min = 1,
-              max = 10
+        bslib::card_body(
+          bslib::layout_columns(
+            col_widths = c(6, 6),
+            
+            # Raw Data
+            div(class = "sidebar-card",
+                div(span(class = "step-badge", "1"),
+                    span(class = "step-title", "Raw Dataset")),
+                hr(),
+                fileInput(ns("raw_file"), NULL, accept = c(".xlsx", ".xls"), width = "100%"),
+                uiOutput(ns("raw_info")),
+                uiOutput(ns("uuid_input_ui"))
             ),
-          numericInput(
-            ns("missing_factor"),
-            "Missing % strongness factor",
-            value = 2,
-            min = 1,
-            max = 10
-          ),
-          checkboxInput(ns("run_soft_dup"), "Run soft duplicate check", value = TRUE),
-          checkboxInput(ns("run_others"), "Run other-responses check", value = TRUE))
-    
-      ),
-      
-      
-      column(
-        6,
-        
-        
-        div(
-          class = "sidebar-card",
-          div(
-            span(class = "step-badge", "5"),
-            span(class = "step-title", "Output Folder")
-          ),
-          hr(style = "margin:10px 0;"),
-          
-          textInput(
-            ns("info_cols"),
-            "Extra info columns (comma-separated)",
-            value = "index,admin1,admin2,admin3,enum_id,dc_modality,_submission_time",
-            width = "100%"
-          ),
-          textInput(
-            ns("out_dir"),
-            NULL,
-            value = normalizePath("~", mustWork = FALSE),
-            placeholder = "Folder path for saved outputs",
-            width = "100%"
-          ),
-          
-          # actionButton(ns("browse_out"), "Browse Folder", icon = icon("folder-open"),
-          #              style="width:100%; margin-bottom:8px;")
-          actionButton(ns("run_btn"), "▶ Run Cleaning Checks", class = "btn-run"),
-          br(),
-          uiOutput(ns("dl_buttons"))
+            
+            # Kobo
+            div(class = "sidebar-card",
+                div(span(class = "step-badge", "2"),
+                    span(class = "step-title", "KoBo Form")),
+                hr(),
+                fileInput(ns("kobo_file"), NULL, accept = c(".xlsx", ".xls"), width = "100%"),
+                uiOutput(ns("kobo_info"))
+            )
+          )
         )
-        
-        # ,
-        #
-        # div(class = "sidebar-card",
-        #     actionButton(ns("run_btn"), "▶ Run Cleaning Checks", class = "btn-run"),
-        #     br(),
-        #     uiOutput(ns("dl_buttons"))
-        # )
       )
-    
-    
     ),
+    
+    # =======================
+    # Parameters
+    # =======================
+    
     fluidRow(
-      # MAIN PANEL
-      column(
-        12,
-        # uiOutput(ns("summary_row")),
-        tabsetPanel(
-          id = ns("main_tabs"),
-          tabPanel(
-            "📋 Cleaning Log",
+      bslib::card(
+        bslib::card_header(icon("cogs"), "Parameters"),
+        
+        bslib::card_body(
+          # ------ First Row ------
+          bslib::layout_columns(
+            col_widths = c(3, 3, 3, 3),
+            
+            div(class = "sidebar-card",
+                checkboxInput(ns("run_dup"), "Run duplicate check", FALSE),
+                hr(),
+                textInput(ns("index_col"), "Duplicate column"),
+                div(
+                  style = "font-size:12px; color:#6c757d;",
+                  "Add more columns to check for duplicates (comma-separated, e.g. index1,index2)"
+                )
+            ),
+            
+            div(class = "sidebar-card",
+                checkboxInput(ns("run_soft_dup"), "Run soft duplicate check", TRUE),
+                hr(),
+                numericInput(ns("soft_dup_threshold"), "Threshold", value = 7, min = 1)
+            ),
+            div(class = "sidebar-card",
+                checkboxInput(ns("run_outlier"), "Run Outlier check", value = TRUE),
+                hr(),
+                numericInput(ns("strongness"), "Outlier strongness factor", value = 3, min = 1, max = 10)
+            ),
+            
             div(
-              class = "summary-card",
-              fluidRow(column(6, uiOutput(
-                ns("cl_filter_ui")
-              )), column(
-                6,
-                div(style = "text-align:right; padding-top:22px;", uiOutput(ns("cl_count")))
-              )),
-              hr(style = "margin:10px 0;"),
-              DTOutput(ns("cl_table"))
+              class = "sidebar-card",
+              checkboxInput(ns("run_perc_missing"), "Run % Missing check", value = TRUE),
+              hr(),
+              numericInput(ns("missing_factor"),"Strongness factor", value = 2, min = 1, max = 10)
             )
           ),
-          tabPanel("🔁 Other Responses", div(class = "summary-card", DTOutput(
-            ns("others_table")
-          ))),
-          # tabPanel("📊 Check Summary",
-          #          div(class="summary-card", DTOutput(ns("check_summary_table")))
-          # ),
-          tabPanel("🖥 Run Log", div(
-            class = "summary-card",
-            h5("Console output", style = "margin-top:0;"),
-            div(class = "log-box", verbatimTextOutput(ns("log_output")))
-          ))
+          # ------ Second Row ------
+          bslib::layout_columns(
+            col_widths = c(4, 8),
+            
+            div(class = "sidebar-card",
+                checkboxInput(ns("run_logical"), "Run Logical Checks", TRUE),
+                hr(),
+                fileInput(ns("checks_file"), NULL, accept = c(".xlsx", ".xls")),
+                uiOutput(ns("checks_info"))
+            ),
+            
+            div(class = "sidebar-card",
+                checkboxInput(ns("run_info_col"), "Add more columns to include in the cleaning log", value = TRUE),
+                hr(),
+                textInput(
+                  ns("info_cols"),
+                  label = NULL,
+                  width = "100%"
+                ),
+                div(
+                  style = "font-size:12px; color:#6c757d;",
+                  "comma-separated, e.g. admin1,admin2"
+                )
+            )
+          )
+        )
+      )
+    ),
+    
+    # =======================
+    # Run Section
+    # =======================
+    fluidRow(
+      bslib::card(
+        bslib::card_header(icon("play"), "Run Checks"),
+        
+        bslib::card_body(
+          div(class = "sidebar-card",
+              actionButton(ns("run_btn"), "▶ Run Cleaning Checks", class = "btn-run"),
+              br(),
+              uiOutput(ns("dl_buttons")),
+              br(),
+              uiOutput(ns("summary_row"))
+          )
+        )
+      )
+    ),
+    
+    # =======================
+    # Output Tabs
+    # =======================
+    fluidRow(
+      column(
+        12,
+        tabsetPanel(
+          id = ns("main_tabs"),
+          
+          tabPanel("📋 Cleaning Log",
+                   div(class = "summary-card",
+                       DTOutput(ns("cl_table")))
+          ),
+          
+          tabPanel("🔁 Other Responses",
+                   div(class = "summary-card",
+                       DTOutput(ns("others_table")))
+          ),
+          
+          tabPanel("🖥 Run Log",
+                   div(class = "summary-card",
+                       div(class = "log-box",
+                           verbatimTextOutput(ns("log_output"))
+                       ))
+          )
         )
       )
     )
   )
 }
-
 # Server Module
 mod_cleaning_log_generator_server <- function(id) {
   moduleServer(id, function(input, output, session) {
@@ -290,8 +260,12 @@ mod_cleaning_log_generator_server <- function(id) {
       log = character(0),
       cl_path = NULL,
       oth_path = NULL,
-      cols_numeric = character(0)
+      cols_numeric = character(0),
+      info_cols = character(0)
     )
+    
+    out_date <- stringr::str_sub(stringr::str_remove_all(Sys.Date(), "-"), 3)
+    cl_path  <<- file.path(paste0("cleaning_log_", out_date, ".xlsx"))
     
     # Helper functions (keep all your existing helper functions here)
     
@@ -307,27 +281,12 @@ mod_cleaning_log_generator_server <- function(id) {
       ts <- format(Sys.time(), "%H:%M:%S")
       rv$log <- c(rv$log, paste0("[", ts, "] ", prefix, msg))
     }
-    
-    # Your existing helper functions here:
-    # - get_column_letter
-    # - save_other_responses
-    # - check_others_custom
-    # - check_answer_in_list
-    # - check_constraints
-    # - get_ref_question
-    # - get_name_from_label
-    # - get_value_from_uuid
-    # - add_choice
-    # - remove_choice
-    # - create_other_db_from_kobo
-    # - read_raw_data_single
-    # - save_other_responses_simple
-    
-    
+
     # File upload observers
     observeEvent(input$raw_file, {
       req(input$raw_file)
       tryCatch({
+        
         rv$raw_path <- input$raw_file$datapath
         full_df <- read_excel(rv$raw_path, sheet = 1, col_types = "text")
         log_msg(paste0(
@@ -338,6 +297,38 @@ mod_cleaning_log_generator_server <- function(id) {
           " columns"
         ),
         "success")
+        
+        # Auto-detect UUID column
+        cols <- names(full_df)
+        # prioritize common uuid names
+        uuid_candidates <- c("uuid", "_uuid", "UUID", "_UUID")
+        
+        detected <- uuid_candidates[uuid_candidates %in% cols]
+        
+        if (length(detected) > 0) {
+          updateTextInput(session, "uuid_col", value = detected[1])
+        }
+        
+        candidates <- c(
+          "admin1", "admin1Pcode", "admin1pcode", "admin1Pcod", "admin1pcod",
+          "admin2", "admin2Pcode", "admin2pcode", "admin2Pcod", "admin2pcod",
+          "admin3", "admin3Pcode", "admin3pcode", "admin3Pcod", "admin3pcod",
+          "enum_id", "enumerator_id", "enum_code", "enumerator_code",
+          "dc_modality", "modality",
+          "_submission_time", "submission_time"
+        )
+        
+        detected <- candidates[candidates %in% cols]
+        
+        # ALWAYS force include submission time (if exists in dataset)
+        detected <- unique(c(detected, intersect("_submission_time", cols)))
+        
+        detected_str <- paste(detected, collapse = ",")
+        
+        if (length(detected) > 0) {
+          updateTextInput(session, "info_cols", value = detected_str)
+        }
+        
       }, error = function(e)
         log_msg(paste("Error reading raw data:", e$message), "error"))
     })
@@ -450,24 +441,52 @@ mod_cleaning_log_generator_server <- function(id) {
         log_msg(paste("Error reading KoBo:", e$message), "error"))
     })
     
-    # Browse output folder
-    observeEvent(input$browse_out, {
-      tryCatch({
-        if (requireNamespace("rstudioapi", quietly = TRUE) &&
-            rstudioapi::isAvailable()) {
-          chosen <- rstudioapi::selectDirectory("Select output folder", path = input$out_dir)
-          if (!is.null(chosen))
-            updateTextInput(session, "out_dir", value = chosen)
-        }
-      }, error = function(e)
-        NULL)
-    })
-    
+    # # Browse output folder
+    # observeEvent(input$browse_out, {
+    #   tryCatch({
+    #     if (requireNamespace("rstudioapi", quietly = TRUE) &&
+    #         rstudioapi::isAvailable()) {
+    #       chosen <- rstudioapi::selectDirectory("Select output folder", path = input$out_dir)
+    #       if (!is.null(chosen))
+    #         updateTextInput(session, "out_dir", value = chosen)
+    #     }
+    #   }, error = function(e)
+    #     NULL)
+    # })
+    # 
     # File info UIs
     output$raw_info <- renderUI({
       req(rv$raw_path)
       n <- nrow(read_excel(rv$raw_path, sheet = 1, col_types = "text"))
       div(style = "font-size:12px; color:#27ae60;", icon("check"), sprintf(" %d rows loaded", n))
+    })
+    
+    
+    output$uuid_input_ui <- renderUI({
+      req(rv$raw_path)
+      
+      div(class = "sidebar-card",
+          
+          # Row: title (left) + input (right)
+          div(
+            style = "font-size:12px; color:#6c757d;",
+            "UUID column (a field that uniquely identifies each record)"
+          ),
+          div(
+            style = "flex:1;",
+            textInput(
+              ns("uuid_col"),
+              label = NULL,
+              value = rv$detected_uuid,
+              placeholder = "e.g. uuid or _uuid",
+              width = "100%"
+            )
+          ),
+          div(
+            style = "font-size:12px; color:#6c757d;",
+            "Auto-detected — change if incorrect."
+          )
+      )
     })
     
     output$checks_info <- renderUI({
@@ -506,17 +525,11 @@ mod_cleaning_log_generator_server <- function(id) {
           rv$so_checks,
           rv$sm_checks,
           rv$kobo_s,
-          rv$kobo_c)
+          rv$kobo_c,
+          input$uuid_col
+          )
       if (rv$running)
         return()
-      
-      out_dir <- trimws(input$out_dir)
-      if (!dir.exists(out_dir)) {
-        showNotification("Output folder does not exist.",
-                         type = "error",
-                         duration = 4)
-        return()
-      }
       
       rv$running <- TRUE
       rv$ready   <- FALSE
@@ -529,7 +542,10 @@ mod_cleaning_log_generator_server <- function(id) {
         kobo_survey  <- rv$kobo_s
         kobo_choices <- rv$kobo_c
         uuid_col     <- trimws(input$uuid_col)
-        info_cols    <- trimws(unlist(str_split(input$info_cols, ",")))
+        rv$info_cols <- c(
+          trimws(unlist(str_split(input$info_cols, ","))),
+          "_submission_time"
+        )
         
         # ── 1. Read raw data ─────────────────────────────────
         log_msg("Reading raw dataset...")
@@ -540,16 +556,22 @@ mod_cleaning_log_generator_server <- function(id) {
         rv$raw_data <- raw
         
         # ── 2. Main cleaning checks ──────────────────────────
-        log_msg("Running duplicate check...")
+        if (isTRUE(input$run_dup) && nzchar(trimws(input$index_col))) {
+          
+          cols_to_check <- trimws(unlist(strsplit(input$index_col, ",")))
+          cols_to_check <- cols_to_check[cols_to_check != ""]
+          
+        log_msg("Running duplicate check1...")
         cleaning_log <- raw %>%
           cleaningtools::check_duplicate(
             uuid_column      = uuid_col,
-            columns_to_check = c(trimws(input$index_col)),
+            columns_to_check = cols_to_check,
             log_name         = "duplicate_log_uuid"
           )
         
+        
         if (isTRUE(input$run_soft_dup)) {
-          log_msg("Running soft duplicate check...")
+          log_msg("Running soft duplicate check2...")
           cleaning_log <- cleaning_log %>%
             cleaningtools::check_soft_duplicates(
               kobo_survey      = kobo_survey,
@@ -557,23 +579,26 @@ mod_cleaning_log_generator_server <- function(id) {
               idnk_value       = "dnk",
               sm_separator     = "/",
               log_name         = "soft_duplicate_log",
+              threshold = as.numeric(input$soft_dup_threshold),
               return_all_results = FALSE
             )
         }
-        
-        log_msg("Running select_one logical checks...")
-        so_list <- rv$so_checks
-        if ("sheet" %in% names(so_list))
-          so_list <- so_list %>% filter(sheet == "main") %>% select(-sheet, -any_of("order"))
-        cleaning_log <- cleaning_log %>%
-          cleaningtools::check_logical_with_list(
-            uuid_column              = uuid_col,
-            list_of_check            = so_list,
-            check_id_column          = "check_id",
-            check_to_perform_column  = "check_to_perform",
-            columns_to_clean_column  = "columns_to_clean",
-            description_column       = "description"
-          )
+        } else {
+         
+        if (isTRUE(input$run_soft_dup)) {
+          log_msg("Running soft duplicate check...")
+          cleaning_log <- raw %>%
+            cleaningtools::check_soft_duplicates(
+              kobo_survey      = kobo_survey,
+              uuid_column      = uuid_col,
+              idnk_value       = "dnk",
+              sm_separator     = "/",
+              log_name         = "soft_duplicate_log",
+              threshold = as.numeric(input$soft_dup_threshold),
+              return_all_results = FALSE
+            )
+        }
+        }
         
         log_msg("Running value check (-999, 999, -888, 888)...")
         cleaning_log <- cleaning_log %>%
@@ -583,70 +608,92 @@ mod_cleaning_log_generator_server <- function(id) {
             values_to_look = c(-999, 999, -888, 888)
           )
         
-        log_msg("Running outlier check...")
-        cleaning_log <- cleaning_log %>%
-          cleaningtools::check_outliers(
-            uuid_column                      = uuid_col,
-            element_name                     = "checked_dataset",
-            kobo_survey                      = NULL,
-            kobo_choices                     = NULL,
-            cols_to_add_cleaning_log         = NULL,
-            strongness_factor                = input$strongness,
-            minimum_unique_value_of_variable = NULL,
-            remove_choice_multiple           = TRUE,
-            sm_separator                     = "/",
-            columns_not_to_check             = NULL
-          )
-        
-        # ── 3. Select_multiple logical checks ────────────────
-        log_msg("Running select_multiple logical checks...")
-        new_main      <- raw
-        clean_names   <- gsub("/", "__", names(new_main))
-        clean_names   <- make.unique(clean_names, sep = "__")
-        names(new_main) <- clean_names
-        
-        sm_list <- rv$sm_checks
-        cl_sm <- new_main %>%
-          cleaningtools::check_logical_with_list(
-            uuid_column              = uuid_col,
-            list_of_check            = sm_list,
-            check_id_column          = "check_id",
-            check_to_perform_column  = "check_to_perform",
-            columns_to_clean_column  = "columns_to_clean",
-            description_column       = "description"
-          )
-        
-        cleaning_log[["checked_dataset"]] <- bind_cols(cleaning_log[["checked_dataset"]], cl_sm[["checked_dataset"]] %>% select(starts_with("sm_check")))
-        cleaning_log[["logical_all"]] <- bind_rows(cleaning_log[["logical_all"]], cl_sm[["logical_all"]])
+        if (isTRUE(input$run_outlier)) {
+          log_msg("Running outlier check...")
+          cleaning_log <- cleaning_log %>%
+            cleaningtools::check_outliers(
+              uuid_column                      = uuid_col,
+              element_name                     = "checked_dataset",
+              kobo_survey                      = NULL,
+              kobo_choices                     = NULL,
+              cols_to_add_cleaning_log         = NULL,
+              strongness_factor                = input$strongness,
+              minimum_unique_value_of_variable = NULL,
+              remove_choice_multiple           = TRUE,
+              sm_separator                     = "/",
+              columns_not_to_check             = NULL
+            )
+        }
+        # ── 3. logical checks ────────────────
+        if (isTRUE(input$run_logical)) {
+          
+          log_msg("Running select_one logical checks...")
+          so_list <- rv$so_checks
+          if ("sheet" %in% names(so_list))
+            so_list <- so_list %>% filter(sheet == "main") %>% select(-sheet, -any_of("order"))
+          cleaning_log <- cleaning_log %>%
+            cleaningtools::check_logical_with_list(
+              uuid_column              = uuid_col,
+              list_of_check            = so_list,
+              check_id_column          = "check_id",
+              check_to_perform_column  = "check_to_perform",
+              columns_to_clean_column  = "columns_to_clean",
+              description_column       = "description"
+            )
+          
+          log_msg("Running select_multiple logical checks...")
+          new_main      <- raw
+          clean_names   <- gsub("/", "__", names(new_main))
+          clean_names   <- make.unique(clean_names, sep = "__")
+          names(new_main) <- clean_names
+          
+          sm_list <- rv$sm_checks
+          cl_sm <- new_main %>%
+            cleaningtools::check_logical_with_list(
+              uuid_column              = uuid_col,
+              list_of_check            = sm_list,
+              check_id_column          = "check_id",
+              check_to_perform_column  = "check_to_perform",
+              columns_to_clean_column  = "columns_to_clean",
+              description_column       = "description"
+            )
+          
+          cleaning_log[["checked_dataset"]] <- bind_cols(cleaning_log[["checked_dataset"]], cl_sm[["checked_dataset"]] %>% select(starts_with("sm_check")))
+          cleaning_log[["logical_all"]] <- bind_rows(cleaning_log[["logical_all"]], cl_sm[["logical_all"]])
+        }
         
         # ── 4. Missing percentage ────────────────────────────
-        log_msg("Adding percentage missing...")
-        cleaning_log$checked_dataset <- cleaning_log$checked_dataset %>%
-          cleaningtools::add_percentage_missing(
-            kobo_survey     = kobo_survey,
-            type_to_include = c("integer", "select_one", "select_multiple")
-          )
-        cleaning_log <- cleaning_log %>%
-          cleaningtools::check_percentage_missing(
-            uuid_column      = uuid_col,
-            column_to_check  = "percentage_missing",
-            strongness_factor = input$missing_factor,
-            log_name         = "percentage_missing_log"
-          )
-        
+        if (isTRUE(input$run_perc_missing)) {
+          log_msg("Adding percentage missing...")
+          cleaning_log$checked_dataset <- cleaning_log$checked_dataset %>%
+            cleaningtools::add_percentage_missing(
+              kobo_survey     = kobo_survey,
+              type_to_include = c("integer", "select_one", "select_multiple")
+            )
+          cleaning_log <- cleaning_log %>%
+            cleaningtools::check_percentage_missing(
+              uuid_column      = uuid_col,
+              column_to_check  = "percentage_missing",
+              strongness_factor = input$missing_factor,
+              log_name         = "percentage_missing_log"
+            )
+        }
         # ── 5. Combine log ───────────────────────────────────
-        log_msg("Combining cleaning log...")
-        info_cols_present <- intersect(info_cols, names(cleaning_log[["checked_dataset"]]))
+        combined <- cleaningtools::create_combined_log(cleaning_log, dataset_name = "checked_dataset")
         
-        combined <- cleaningtools::create_combined_log(cleaning_log, dataset_name = "checked_dataset") %>%
-          cleaningtools::add_info_to_cleaning_log(
-            dataset                   = "checked_dataset",
-            cleaning_log              = "cleaning_log",
-            dataset_uuid_column       = uuid_col,
-            cleaning_log_uuid_column  = uuid_col,
-            information_to_add        = info_cols_present
-          )
-        
+        if (isTRUE(input$run_info_col)) {
+          log_msg("Combining cleaning log...")
+          info_cols_present <- intersect(rv$info_cols, names(cleaning_log[["checked_dataset"]]))
+          
+          combined <- combined %>%
+            cleaningtools::add_info_to_cleaning_log(
+              dataset                   = "checked_dataset",
+              cleaning_log              = "cleaning_log",
+              dataset_uuid_column       = uuid_col,
+              cleaning_log_uuid_column  = uuid_col,
+              information_to_add        = info_cols_present
+            )
+        }
         # ── 6. Enrich with kobo labels ───────────────────────
         log_msg("Adding question labels and choices...")
         combined$cleaning_log <- combined$cleaning_log %>%
@@ -690,12 +737,11 @@ mod_cleaning_log_generator_server <- function(id) {
         
         combined$cleaning_log <- combined$cleaning_log %>%
           left_join(survey_question, by = c("question" = "name")) %>%
-          rename(choices = choices_joined)
-        # %>%
-        #     mutate(question = ifelse(
-        #         "id_most_similar_survey" %in% names(.) & !is.na(id_most_similar_survey),
-        #         "soft_duplicate", question
-        #     ))
+          rename(choices = choices_joined) %>%
+            mutate(question = ifelse(
+                "id_most_similar_survey" %in% names(.) & !is.na(id_most_similar_survey),
+                "soft_duplicate", question
+            ))
         
         rv$cl           <- combined$cleaning_log
         rv$combined_obj <- combined
@@ -710,134 +756,120 @@ mod_cleaning_log_generator_server <- function(id) {
         } else {
           rv$check_sum <- data.frame(note = "No issue_type column found in log")
         }
-        # ── 7. Other responses ────────────────────────────────
-        if (isTRUE(input$run_others)) {
-          log_msg(
-            paste0(
-              "Checking other responses...",
-              nrow(rv$other_db),
-              "questions to check"
-            ),
-            "success"
-          )
-          log_msg(
-            paste0(
-              "2Checking other responses...",
-              nrow(raw),
-              "questions to check"
-            ),
-            "success"
-          )
-          
-          # rv$other_df <- check_others_custom(raw, rv$other_db)
-          
-          
-          
-          
-          data_sheet <- raw %>%
-            distinct(uuid, .keep_all = TRUE)
-          
-          raw_data_sheet <- raw %>%
-            distinct(uuid, .keep_all = TRUE)
-          var_other_raw <- rv$other_db$name[rv$other_db$name %in% colnames(data_sheet)]
-          other_responses_main <- data_sheet %>%
-            select(c("uuid", all_of(var_other_raw))) %>%
-            pivot_longer(
-              cols = all_of(var_other_raw),
-              names_to = "question_name",
-              values_to = "response_eth"
-            ) %>%
-            filter(!is.na(response_eth)) %>%
-            select(uuid, question_name, response_eth)
-          other_responses <- other_responses_main %>%
-            mutate(response_en = NA)
-          
-          df <- other_responses %>%
-            left_join(
-              select(
-                data_sheet,
-                uuid,
-                `_submission_time`,
-                admin1,
-                admin2,
-                admin3,
-                enum_id
-              ),
-              by = "uuid"
-            ) %>%
-            mutate(`_submission_time` = format(as.Date(`_submission_time`), "%y:%m:%d")) %>%
-            arrange(question_name, uuid) %>%
-            left_join(
-              select(
-                rv$other_db,
-                name,
-                full_label,
-                q_type,
-                list_name,
-                ref_question
-              ),
-              by = c("question_name" = "name")
-            ) %>%
+        # ── 7. Other responses ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+        log_msg(
+          paste0(
+            "Checking other responses...",
+            nrow(rv$other_db),
+            "questions to check"
+          ),
+          "success"
+        )
+        log_msg(
+          paste0(
+            "2Checking other responses...",
+            nrow(raw),
+            "questions to check"
+          ),
+          "success"
+        )
+        
+        # rv$other_df <- check_others_custom(raw, rv$other_db)
+
+        data_sheet <- raw %>%
+          distinct(uuid, .keep_all = TRUE)
+        
+        raw_data_sheet <- raw %>%
+          distinct(uuid, .keep_all = TRUE)
+        var_other_raw <- rv$other_db$name[rv$other_db$name %in% colnames(data_sheet)]
+        other_responses_main <- data_sheet %>%
+          select(c("uuid", all_of(var_other_raw))) %>%
+          pivot_longer(
+            cols = all_of(var_other_raw),
+            names_to = "question_name",
+            values_to = "response_eth"
+          ) %>%
+          filter(!is.na(response_eth)) %>%
+          select(uuid, question_name, response_eth)
+        other_responses <- other_responses_main %>%
+          mutate(response_en = NA)
+        
+        df <- other_responses %>%
+          left_join(
             select(
+              data_sheet,
               uuid,
-              `_submission_time`,
-              admin1,
-              admin2,
-              admin3,
-              enum_id,
-              question_name,
+              rv$info_cols
+            ),
+            by = "uuid"
+          ) %>%
+          mutate(`_submission_time` = format(as.Date(`_submission_time`), "%y:%m:%d")) %>%
+          arrange(question_name, uuid) %>%
+          left_join(
+            select(
+              rv$other_db,
+              name,
+              full_label,
               q_type,
               list_name,
-              full_label,
-              response_eth,
-              response_en
-            ) %>%
-            mutate(
-              "TRUE other (copy response_en or provide a better translation)" = NA,
-              "EXISTING other 1 (select the most appropriate choice)" = NA,
-              "EXISTING other 2 (select the most appropriate choice)" = NA,
-              "EXISTING other 3 (select the most appropriate choice)" = NA,
-              "INVALID other (select yes or leave blank)" = NA,
-              "FOLLOW-UP message (what is unclear about this response?)" = NA,
-              "Explanation" = NA,
-              "_index" = NA,
-              selected_choices = NA
-              
-            )
-          if (nrow(df) > 0) {
-            for (r in seq_len(nrow(df))) {
-              ref_name <- rv$other_db$ref_question[rv$other_db$name == df$question_name[r]]
-              q_type <- rv$other_db$q_type[rv$other_db$name == df$question_name[r]]
-              
-              if (!is.na(ref_name) && q_type == "select_multiple") {
-                choices <- raw_data_sheet[[ref_name]][raw_data_sheet$uuid == df$uuid[r]]
-                choices <- choices[1]
-                paste0(choices)
-                if (length(choices) > 0 && !is.na(choices[1])) {
-                  choice_vec <- str_split(choices, " ")[[1]]
-                  df$selected_choices[r] <- paste0(choice_vec, collapse = ";\n")
-                }
+              ref_question
+            ),
+            by = c("question_name" = "name")
+          ) %>%
+          select(
+            uuid,
+            rv$info_cols,
+            question_name,
+            q_type,
+            list_name,
+            full_label,
+            response_eth,
+            response_en
+          ) %>%
+          mutate(
+            "TRUE other (copy response_en or provide a better translation)" = NA,
+            "EXISTING other 1 (select the most appropriate choice)" = NA,
+            "EXISTING other 2 (select the most appropriate choice)" = NA,
+            "EXISTING other 3 (select the most appropriate choice)" = NA,
+            "INVALID other (select yes or leave blank)" = NA,
+            "FOLLOW-UP message (what is unclear about this response?)" = NA,
+            "Explanation" = NA,
+            "_index" = NA,
+            selected_choices = NA
+            
+          )
+        if (nrow(df) > 0) {
+          for (r in seq_len(nrow(df))) {
+            ref_name <- rv$other_db$ref_question[rv$other_db$name == df$question_name[r]]
+            q_type <- rv$other_db$q_type[rv$other_db$name == df$question_name[r]]
+            
+            if (!is.na(ref_name) && q_type == "select_multiple") {
+              choices <- raw_data_sheet[[ref_name]][raw_data_sheet$uuid == df$uuid[r]]
+              choices <- choices[1]
+              paste0(choices)
+              if (length(choices) > 0 && !is.na(choices[1])) {
+                choice_vec <- str_split(choices, " ")[[1]]
+                df$selected_choices[r] <- paste0(choice_vec, collapse = ";\n")
               }
             }
-          } else {
-            cat(yellow("No other response log for the day:\n"))
-            cat(green(submissions), "\n")
-            cat(red("Please double check the dataset manually.\n"))
           }
-          rv$other_df <- relocate(df, "selected_choices", .before = "response_eth")
-          
-          
-          #############################################################################################################################################################
-          log_msg("3Checking other responses...")
-          if (!is.null(rv$other_df) && nrow(rv$other_df) > 0) {
-            log_msg(paste0("Other responses: ", nrow(rv$other_df), " found"),
-                    "success")
-            rv$others <- rv$other_df
-          } else {
-            log_msg("No other responses found", "info")
-            rv$others <- NULL
-          }
+        } else {
+          cat(yellow("No other response log for the day:\n"))
+          cat(green(submissions), "\n")
+          cat(red("Please double check the dataset manually.\n"))
         }
+        rv$other_df <- relocate(df, "selected_choices", .before = "response_eth")
+        
+        log_msg("3Checking other responses...")
+        if (!is.null(rv$other_df) && nrow(rv$other_df) > 0) {
+          log_msg(paste0("Other responses: ", nrow(rv$other_df), " found"),
+                  "success")
+          rv$others <- rv$other_df
+        } else {
+          log_msg("No other responses found", "info")
+          rv$others <- NULL
+        }
+        
         
         rv$ready <- TRUE
         rv$running <- FALSE
@@ -875,15 +907,21 @@ mod_cleaning_log_generator_server <- function(id) {
       else
         0
       
-      fluidRow(column(4, div(
+      fluidRow(
+        
+      column(4, div(
         class = "summary-card",
         div(class = "metric-num", n_issues),
         div(class = "metric-lbl", "Total Issues")
-      )), column(4, div(
+      )), 
+      
+      column(4, div(
         class = "summary-card",
         div(class = "metric-num", n_oth),
         div(class = "metric-lbl", "Other Responses")
-      )), column(4, div(
+      )),
+      
+      column(4, div(
         class = "summary-card",
         div(class = "metric-num", if (!is.null(cl) &&
                                       "uuid" %in% names(cl))
@@ -891,7 +929,8 @@ mod_cleaning_log_generator_server <- function(id) {
           else
             "—"),
         div(class = "metric-lbl", "UUIDs Flagged")
-      )))
+      ))
+      )
     })
     
     # Download buttons
@@ -901,40 +940,36 @@ mod_cleaning_log_generator_server <- function(id) {
       tagList(
         div(
           style = "margin-top:10px;",
-          actionButton(ns("save_cl"), "💾 Save & Open Cleaning Log", class = "btn-dl")
-        ),
-        if (!is.null(rv$others) && nrow(rv$others) > 0)
-          div(
-            style = "margin-top:6px;",
-            actionButton(ns("save_oth"), "💾 Save & Open Other Responses", class = "btn-dl")
-          )
-      )
+          actionButton(ns("save_cl"), "💾 Save Cleaning Log", class = "btn-dl")
+        )
+        )
     })
     
     # Save cleaning log
     observeEvent(input$save_cl, {
-      req(rv$combined_obj, rv$kobo_s, rv$kobo_c)
-      out_dir <- trimws(input$out_dir)
-      if (!dir.exists(out_dir)) {
-        showNotification("Output folder does not exist.",
-                         type = "error",
-                         duration = 4)
-        return()
-      }
-      out_date <- stringr::str_sub(stringr::str_remove_all(Sys.Date(), "-"), 3)
-      cl_path  <- file.path(out_dir, paste0("cleaning_log_", out_date, ".xlsx"))
-      log_msg("Saving cleaning log...")
+      req(rv$combined_obj, rv$kobo_s, rv$kobo_c, rv$other_db)
+    # ____________ Common follow-up log ________________________________________
+      log_msg("Creating common follow-up log...")
       tryCatch({
-        cleaningtools::create_xlsx_cleaning_log(
+        wb_cl <<- custom_create_xlsx_cleaning_log(
           rv$combined_obj,
           kobo_survey      = rv$kobo_s,
           kobo_choices     = rv$kobo_c,
           sm_dropdown_type = "logical",
           use_dropdown     = TRUE,
-          output_path      = cl_path
+          output_path      = NULL,
+          
+          cleaning_log_name = "cleaning_log",
+          change_type_col = "change_type",
+          column_for_color = "check_binding",
+          header_front_size = 12,
+          header_front_color = "#FFFFFF",
+          header_fill_color = "#ee5859",
+          header_front = "Arial Narrow",
+          body_front = "Arial Narrow",
+          body_front_size = 11
         )
-        log_msg(paste("Cleaning log saved:", cl_path), "success")
-        
+
         # Try to open the file
         sys <- Sys.info()["sysname"]
         tryCatch({
@@ -967,30 +1002,22 @@ mod_cleaning_log_generator_server <- function(id) {
                          duration = 4)
       })
       rv$cl_path <- cl_path
-    })
-    # Save other responses
-    observeEvent(input$save_oth, {
-      req(rv$others, rv$other_db)
-      if (is.null(rv$others) || nrow(rv$others) == 0) {
-        showNotification("No other responses to save.",
-                         type = "warning",
-                         duration = 3)
-        return()
-      }
       
-      out_dir <- trimws(input$out_dir)
-      if (!dir.exists(out_dir)) {
-        showNotification("Output folder does not exist.",
-                         type = "error",
-                         duration = 4)
-        return()
-      }
       
-      out_date <- str_sub(str_remove_all(Sys.Date(), "-"), 3)
-      oth_path <- file.path(out_dir, paste0("other_responses_", out_date, ".xlsx"))
+     # ___________ Other responses _____________________________________________
+     if (is.null(rv$others) || nrow(rv$others) == 0) {
+          showNotification("No other responses to save.",
+                           type = "warning",
+                           duration = 3)
+          return()
+        }
+        
+        # out_date <- str_sub(str_remove_all(Sys.Date(), "-"), 3)
+        # oth_path <- file.path(
+        #   # out_dir, 
+        #   paste0("other_responses_", out_date, ".xlsx"))
       
       tryCatch({
-        ###################################################################################################################################################################
         log_msg("Saving other responses...")
         # save_other_responses(rv$other_df, oth_path)
         get_column_letter <- function(r) {
@@ -1002,7 +1029,7 @@ mod_cleaning_log_generator_server <- function(id) {
         }
         
         # Save other responses
-        wb <- createWorkbook()
+        wb <- wb_cl
         
         # Define the styles
         style.col.color <- createStyle(
@@ -1037,18 +1064,18 @@ mod_cleaning_log_generator_server <- function(id) {
         log_msg("Styles defined, creating workbook...")
         # Add Worksheet
         df <- rv$other_df
-        addWorksheet(wb, "cleaning_log")
+        addWorksheet(wb, "cleaning_log_other")
         writeData(
           wb = wb,
           x = df,
-          sheet = "cleaning_log",
+          sheet = "cleaning_log_other",
           startRow = 1
         )
         
         # Apply the styles
         addStyle(
           wb,
-          "cleaning_log",
+          "cleaning_log_other",
           style = style.col.color.first,
           rows = 1:(nrow(df) + 1),
           cols = 1
@@ -1056,56 +1083,50 @@ mod_cleaning_log_generator_server <- function(id) {
         
         addStyle(
           wb,
-          "cleaning_log",
+          "cleaning_log_other",
           style = style.col.color2,
           rows = 1:(nrow(df) + 1),
           cols = 13
         )
         addStyle(
           wb,
-          "cleaning_log",
+          "cleaning_log_other",
           style = style.col.color,
           rows = 1:(nrow(df) + 1),
           cols = 14
         )
         addStyle(
           wb,
-          "cleaning_log",
+          "cleaning_log_other",
           style = style.col.color1,
           rows = 1:(nrow(df) + 1),
           cols = 15
         )
         addStyle(
           wb,
-          "cleaning_log",
+          "cleaning_log_other",
           style = style.col.color1,
           rows = 1:(nrow(df) + 1),
           cols = 16
         )
+        addStyle(wb,"cleaning_log_other", style = style.col.color1, rows = 1:(nrow(df) + 1), cols = 17)
         addStyle(
           wb,
-          "cleaning_log",
-          style = style.col.color1,
-          rows = 1:(nrow(df) + 1),
-          cols = 17
-        )
-        addStyle(
-          wb,
-          "cleaning_log",
+          "cleaning_log_other",
           style = style.col.color,
           rows = 1:(nrow(df) + 1),
           cols = 18
         )
         addStyle(
           wb,
-          "cleaning_log",
+          "cleaning_log_other",
           style = style.col.color2,
           rows = 1:(nrow(df) + 1),
           cols = 19
         )
         addStyle(
           wb,
-          "cleaning_log",
+          "cleaning_log_other",
           style = style.col.color2,
           rows = 1:(nrow(df) + 1),
           cols = 20
@@ -1113,17 +1134,17 @@ mod_cleaning_log_generator_server <- function(id) {
         log_msg("Styles applied, setting column widths and filters...")
         
         # Freeze the first row
-        freezePane(wb, sheet = "cleaning_log", firstActiveRow = 2)
+        freezePane(wb, sheet = "cleaning_log_other", firstActiveRow = 2)
         
         # Add column filters
         addFilter(wb,
-                  "cleaning_log",
+                  "cleaning_log_other",
                   rows = 1,
                   cols = 1:ncol(df))
         
         addStyle(
           wb,
-          "cleaning_log",
+          "cleaning_log_other",
           style = createStyle(wrapText = TRUE),
           rows = 1:19,
           cols = 1
@@ -1153,7 +1174,7 @@ mod_cleaning_log_generator_server <- function(id) {
               )
               dataValidation(
                 wb,
-                "cleaning_log",
+                "cleaning_log_other",
                 col = 15,
                 rows = uuids + 1,
                 type = "list",
@@ -1161,7 +1182,7 @@ mod_cleaning_log_generator_server <- function(id) {
               )
               dataValidation(
                 wb,
-                "cleaning_log",
+                "cleaning_log_other",
                 col = 16,
                 rows = uuids + 1,
                 type = "list",
@@ -1169,7 +1190,7 @@ mod_cleaning_log_generator_server <- function(id) {
               )
               dataValidation(
                 wb,
-                "cleaning_log",
+                "cleaning_log_other",
                 col = 17,
                 rows = uuids + 1,
                 type = "list",
@@ -1203,7 +1224,7 @@ mod_cleaning_log_generator_server <- function(id) {
         # Apply data validation to the correct column
         dataValidation(
           wb,
-          "cleaning_log",
+          "cleaning_log_other",
           col = target_col,
           rows = 2:(nrow(df) + 1),
           type = "list",
@@ -1211,59 +1232,59 @@ mod_cleaning_log_generator_server <- function(id) {
         )
         # Set column widths
         setColWidths(wb,
-                     "cleaning_log",
+                     "cleaning_log_other",
                      cols = 1,
                      widths = 20)
         setColWidths(wb,
-                     "cleaning_log",
+                     "cleaning_log_other",
                      cols = 2,
                      widths = 18)
         setColWidths(wb,
-                     "cleaning_log",
+                     "cleaning_log_other",
                      cols = 3,
                      widths = 15)
         setColWidths(wb,
-                     "cleaning_log",
+                     "cleaning_log_other",
                      cols = 4,
                      widths = 15)
         setColWidths(wb,
-                     "cleaning_log",
+                     "cleaning_log_other",
                      cols = 5,
                      widths = 15)
         setColWidths(wb,
-                     "cleaning_log",
+                     "cleaning_log_other",
                      cols = 6,
                      widths = 13)
         setColWidths(wb,
-                     "cleaning_log",
+                     "cleaning_log_other",
                      cols = 7:10,
                      widths = 20)
         setColWidths(wb,
-                     "cleaning_log",
+                     "cleaning_log_other",
                      cols = 11,
                      widths = 35)
         setColWidths(wb,
-                     "cleaning_log",
+                     "cleaning_log_other",
                      cols = 12,
                      widths = 15)
         setColWidths(wb,
-                     "cleaning_log",
+                     "cleaning_log_other",
                      cols = 13,
                      widths = 35)
         setColWidths(wb,
-                     "cleaning_log",
+                     "cleaning_log_other",
                      cols = 14,
                      widths = 35)
         setColWidths(wb,
-                     "cleaning_log",
+                     "cleaning_log_other",
                      cols = 15:19,
                      widths = 30)
         setColWidths(wb,
-                     "cleaning_log",
+                     "cleaning_log_other",
                      cols = 19,
                      widths = 25)
         setColWidths(wb,
-                     "cleaning_log",
+                     "cleaning_log_other",
                      cols = 20:26,
                      widths = 15)
         
@@ -1271,91 +1292,82 @@ mod_cleaning_log_generator_server <- function(id) {
         # Apply text alignment and wrapping
         addStyle(
           wb,
-          "cleaning_log",
+          "cleaning_log_other",
           style = createStyle(valign = "top"),
           rows = 1:(nrow(df) + 1),
           cols = 1
         )
         addStyle(
           wb,
-          "cleaning_log",
+          "cleaning_log_other",
           style = createStyle(valign = "top"),
           rows = 1:(nrow(df) + 1),
           cols = 2
         )
         addStyle(
           wb,
-          "cleaning_log",
+          "cleaning_log_other",
           style = createStyle(valign = "top"),
           rows = 1:(nrow(df) + 1),
           cols = 3
         )
         addStyle(
           wb,
-          "cleaning_log",
+          "cleaning_log_other",
           style = createStyle(valign = "top"),
           rows = 1:(nrow(df) + 1),
           cols = 4
         )
         addStyle(
           wb,
-          "cleaning_log",
+          "cleaning_log_other",
           style = createStyle(valign = "top"),
           rows = 1:(nrow(df) + 1),
           cols = 5
         )
         addStyle(
           wb,
-          "cleaning_log",
+          "cleaning_log_other",
           style = createStyle(valign = "top"),
           rows = 1:(nrow(df) + 1),
           cols = 6
         )
         addStyle(
           wb,
-          "cleaning_log",
+          "cleaning_log_other",
           style = createStyle(wrapText = T, valign = "top"),
           rows = 1:(nrow(df) + 1),
           cols = 7
         )
         addStyle(
           wb,
-          "cleaning_log",
+          "cleaning_log_other",
           style = createStyle(wrapText = T, valign = "top"),
           rows = 1:(nrow(df) + 1),
           cols = 8
         )
         addStyle(
           wb,
-          "cleaning_log",
+          "cleaning_log_other",
           style = createStyle(wrapText = T, valign = "top"),
           rows = 1:(nrow(df) + 1),
           cols = 9
         )
         addStyle(
           wb,
-          "cleaning_log",
+          "cleaning_log_other",
           style = createStyle(wrapText = T, valign = "top"),
           rows = 1:(nrow(df) + 1),
           cols = 10
         )
         
-        setRowHeights(wb,
-                      "cleaning_log",
-                      rows = 1,
-                      heights = 15)
+        setRowHeights(wb,"cleaning_log_other",rows = 1,heights = 15)
         
         # Bold first row
+        addStyle(wb,"cleaning_log_other",style = createStyle(textDecoration = "bold"),rows = 1,cols = 1:ncol(df))
         addStyle(
           wb,
-          "cleaning_log",
-          style = createStyle(textDecoration = "bold"),
-          rows = 1,
-          cols = 1:ncol(df)
-        )
-        addStyle(
-          wb,
-          "cleaning_log",
+          "cleaning_log_other",
           style = style.col.color.first,
           rows = 1,
           cols = 1:26
@@ -1369,26 +1381,81 @@ mod_cleaning_log_generator_server <- function(id) {
         )
         
         log_msg("Styles applied, saving workbook...")
+        ############################################################################################################################################
+        num_vars <- rv$kobo_s %>%
+          filter(type %in% c("integer", "decimal")) %>%
+          select(name, label = `label::english`)
+        
+        plot_df <- rv$raw_data %>%
+          select(uuid, all_of(num_vars$name)) %>%
+          pivot_longer(
+            cols = -uuid,
+            names_to = "variable",
+            values_to = "value"
+          ) %>%
+          mutate(value = as.numeric(value)) %>%
+          filter(!is.na(value))
+        
+        addWorksheet(wb, "numeric_boxplots")
+        
+        library(ggplot2)
+        
+        row_cursor <- 1
+        
+        for (v in unique(plot_df$variable)) {
+          
+          df_v <- plot_df %>% filter(variable == v)
+          
+          label_title <- num_vars$label[num_vars$name == v]
+          if (length(label_title) == 0 || is.na(label_title)) label_title <- v
+          
+          p <- ggplot(df_v, aes(x = "", y = value)) +
+            geom_boxplot(fill = "steelblue") +
+            labs(title = label_title, x = NULL, y = NULL) +
+            theme_minimal()
+          
+          # temp image
+          img_file <- tempfile(fileext = ".png")
+          ggsave(img_file, p, width = 6, height = 4, dpi = 300)
+          
+          # insert into Excel sheet
+          insertImage(
+            wb,
+            sheet = "numeric_boxplots",
+            file = img_file,
+            startRow = row_cursor,
+            startCol = 1,
+            width = 6,
+            height = 4
+          )
+          
+          # add label under plot
+          writeData(
+            wb,
+            sheet = "numeric_boxplots",
+            x = label_title,
+            startRow = row_cursor + 18,
+            startCol = 1
+          )
+          
+          row_cursor <- row_cursor + 22
+        }
+        ############################################################################################################################################
         
         # Define file name and save workbook
         # sub.filename = paste0(Sys.Date(), Region, "_other_responses.xlsx")
-        saveWorkbook(wb, oth_path
-                     , overwrite = T)
-        log_msg(paste("Other responses saved:", oth_path), "success")
-        ###################################################################################################################################################################
+        saveWorkbook(wb, cl_path, overwrite = T)
         
-        showNotification(paste("✅ Saved:", basename(oth_path)),
-                         type = "message",
-                         duration = 4)
+        log_msg(paste("Cleaning log saved:", cl_path), "success")
+        showNotification(paste("✅ Saved:", basename(cl_path)),type = "message",duration = 4)
+        
       }, error = function(e) {
-        log_msg(paste("Error saving other responses:", e$message),
-                "error")
-        showNotification(paste("Error saving:", e$message),
-                         type = "error",
-                         duration = 4)
+        log_msg(paste("Error saving other responses:", e$message),"error")
+        showNotification(paste("Error saving:", e$message), type = "error", duration = 4)
       })
-    })
-    
+
+  })
+ 
     # Tables
     output$cl_filter_ui <- renderUI({
       req(rv$cl, "issue_type" %in% names(rv$cl))

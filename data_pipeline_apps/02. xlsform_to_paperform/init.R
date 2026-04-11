@@ -6,7 +6,7 @@ mod_paper_form_generator_ui <- function(id) {
   bslib::navset_card_tab(
     id = "mod_paper_form_generator",
   bslib::nav_panel(
-    title = "About",
+    title = "Info",
     icon = icon("info-circle"),
     p("This module allows you to upload a Kobo XLSForm and generates a formatted Excel file that can be printed as a paper form. It also extracts any admin hierarchy from the choices sheet to create an annex for reference. The generated form includes question types, hints, constraints, and relevancy conditions to help enumerators understand how to fill it out correctly.")
   ),

@@ -471,8 +471,8 @@ read_raw_data_single <- function(filename, kobo_survey, cols_numeric) {
   df <- read_excel(filename, sheet = 1, col_types = "text")
 
   # Convert date / datetime columns
-  cols_date <- c(kobo_survey$name[kobo_survey$type %in% c("today", "date")], "submission_date")
-  submission_col <- intersect(c("_submission_time", "_submission__submission_time"), colnames(df))
+  cols_date <- c(kobo_survey$name[kobo_survey$type %in% c("today", "date", "date_survey")], "submission_date")
+  submission_col <- intersect(c("_submission_time", "_submission__submission_time","date_survey"), colnames(df))
 
   if (length(submission_col) > 0) {
     df <- df %>% mutate(`_submission_time` = .[[submission_col[1]]])

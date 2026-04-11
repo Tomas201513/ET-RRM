@@ -29,7 +29,7 @@ xlsform_validatorModuleUI <- function(id) {
     id = "validator_subtabs",
     # ---------- Sub-tab 1: About ----------
     bslib::nav_panel(
-      title = "About",
+      title = "Info",
       icon = icon("info-circle"),
       fluidRow(
         column(

@@ -1,0 +1,148 @@
+custom_create_xlsx_cleaning_log <- function(write_list,
+                                     cleaning_log_name = "cleaning_log",
+                                     change_type_col = "change_type",
+                                     column_for_color = "check_binding",
+                                     header_front_size = 12,
+                                     header_front_color = "#FFFFFF",
+                                     header_fill_color = "#ee5859",
+                                     header_front = "Arial Narrow",
+                                     body_front = "Arial Narrow",
+                                     body_front_size = 11,
+                                     use_dropdown = F,
+                                     sm_dropdown_type = NULL,
+                                     kobo_survey = NULL,
+                                     kobo_choices = NULL,
+                                     output_path = NULL) {
+
+  print("1111111111111111")
+  
+  if (use_dropdown & (is.null(kobo_survey) | is.null(kobo_choices))) {
+    stop(glue::glue("Kobo survey and choices sheets should be provided to use dropdown lists"))
+  }
+  if (!is.null(kobo_survey) && !verify_valid_survey(kobo_survey)) {
+    stop(glue::glue("The Kobo survey dataframe is not valid"))
+  }
+  if (!is.null(kobo_choices) && !verify_valid_choices(kobo_choices)) {
+    stop(glue::glue("The Kobo choices dataframe is not valid"))
+  }
+  if (!is.null(sm_dropdown_type) && !stringr::str_to_lower(sm_dropdown_type) %in% c("logical", "numerical")) {
+    stop(glue::glue("Invalid value for sm_dropdown_type - only 'logical' and 'numerical' are accepted"))
+  }
+  if (!cleaning_log_name %in% names(write_list)) {
+    stop(glue::glue(cleaning_log_name, " not found in the given list."))
+  }
+  if (!change_type_col %in% names(write_list[[cleaning_log_name]])) {
+    stop(glue::glue(change_type_col, " not found in ", cleaning_log_name, "."))
+  }
+  if ("validation_rules" %in% names(write_list)) {
+    stop(glue::glue("The list currently has an element named `validation_rules`. Please consider renaming it."))
+  }
+  print("1111111111111111")
+  
+  tryCatch(
+    if (!is.null(kobo_survey) & !is.null(kobo_choices) & use_dropdown == TRUE) {
+      data.val <- create_validation_list(kobo_choices, kobo_survey |> dplyr::filter(!stringr::str_detect(pattern = "(begin|end)(\\s+|_)group", type)))
+    },
+    error = function(e) {
+      warning("Validation list was not created")
+    }
+  )
+  
+  if (!is.null(kobo_survey) & !is.null(kobo_choices) & use_dropdown == TRUE & exists("data.val", inherits = FALSE)) {
+    write_list[["validation_rules"]] <- data.val
+  } else {
+    write_list[["validation_rules"]] <- data.frame(
+      change_type_validation = c("change_response", "blank_response", "remove_survey", "no_action")
+    )
+  }
+  
+  print("1111111111111111")
+  
+  
+  write_list[["readme"]] <- data.frame(
+    change_type_validation = c("change_response", "blank_response", "remove_survey", "no_action"),
+    description = c(
+      "Change the response to new.value",
+      "Remove and NA the response",
+      "Delete the survey",
+      "No action to take."
+    )
+  )
+  print("1111111111111111")
+  
+  workbook <- write_list |> create_formated_wb(
+    column_for_color = column_for_color,
+    header_front_size = header_front_size,
+    header_front_color = header_front_color,
+    header_fill_color = header_fill_color,
+    header_front = header_front,
+    body_front = body_front,
+    body_front_size = body_front_size
+  )
+  
+  print("1111111111111111")
+  
+  hide_sheet <- which(names(workbook) == "validation_rules")
+  
+  openxlsx::sheetVisibility(workbook)[hide_sheet] <- F
+  
+  
+  row_numbers <- 2:(nrow(write_list[[cleaning_log_name]]) + 1)
+  col_number <- which(names(write_list[[cleaning_log_name]]) == change_type_col)
+  
+  
+  if (!is.null(kobo_survey) & !is.null(kobo_choices) & use_dropdown == TRUE & exists("data.val", inherits = FALSE)) {
+    cl <- write_list[[cleaning_log_name]]
+    
+    for (r in 1:nrow(cl)) {
+      if (cl[r, "question"] %in% colnames(data.val) & as.character(cl[r, "uuid"]) != "all") {
+        openxlsx::dataValidation(workbook,
+                                 sheet = cleaning_log_name, cols = which(colnames(cl) == "new_value"),
+                                 rows = r + 1, type = "list",
+                                 value = create_col_range(as.character(cl[r, "question"]), data.val)
+        ) %>%
+          suppressWarnings()
+      } else if ((stringr::str_detect(string = as.character(cl[r, "question"]), pattern = "\\.") |
+                  (stringr::str_detect(string = as.character(cl[r, "question"]), pattern = "\\/") &
+                   (stringr::str_detect(string = as.character(cl[r, "question"]), pattern = "/") == 1))) &
+                 as.character(cl[r, "uuid"]) != "all") {
+        if (is.null(sm_dropdown_type) || stringr::str_to_lower(sm_dropdown_type) == "logical") {
+          openxlsx::dataValidation(workbook,
+                                   sheet = cleaning_log_name, cols = which(colnames(cl) == "new_value"),
+                                   rows = r + 1, type = "list",
+                                   value = create_col_range("binaries_sm_options_lgl", data.val)
+          )
+        } else {
+          openxlsx::dataValidation(workbook,
+                                   sheet = cleaning_log_name, cols = which(colnames(cl) == "new_value"),
+                                   rows = r + 1, type = "list",
+                                   value = create_col_range("binaries_sm_options_num", data.val)
+          )
+        }
+      }
+    }
+    print("1111111111111111")
+    
+    openxlsx::dataValidation(workbook,
+                             sheet = cleaning_log_name, cols = col_number,
+                             rows = row_numbers, type = "list",
+                             value = create_col_range("change_type_validation", data.val)
+    ) %>%
+      suppressWarnings()
+  } else {
+    openxlsx::dataValidation(workbook,
+                             sheet = cleaning_log_name, cols = col_number,
+                             rows = row_numbers, type = "list",
+                             value = "'validation_rules'!$A$2:$A$5"
+    ) %>%
+      suppressWarnings()
+  }
+  
+  if (is.null(output_path)) {
+    return(workbook)
+  }
+  
+  if (!is.null(output_path)) {
+    openxlsx::saveWorkbook(workbook, output_path, overwrite = TRUE)
+  }
+}

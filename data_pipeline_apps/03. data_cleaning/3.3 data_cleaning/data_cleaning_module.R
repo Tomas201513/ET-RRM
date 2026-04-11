@@ -26,21 +26,24 @@ dataCleaningUI <- function(id) {
             # LEFT SIDEBAR
             column(4,
                    fileInput(ns("kobo_file"), "Kobo Form (.xlsx)", 
-                             accept = c(".xlsx", ".xls")),
-                   
+                             accept = c(".xlsx", ".xls"))
+            ),
+            
+            column(4,
                    fileInput(ns("raw_file"), "Raw Data (.xlsx)", 
                              accept = c(".xlsx", ".xls"))
             ),
             
             column(4,
-                   fileInput(ns("fu_log_file"), "FU Cleaning Log (.xlsx)", 
-                             accept = c(".xlsx", ".xls")),
-                   
-                   fileInput(ns("other_log_file"), "Other Cleaning Log (.xlsx)", 
+                   fileInput(ns("fu_log_file"), "Cleaning Log (.xlsx)", 
                              accept = c(".xlsx", ".xls"))
-            ),
+            )
+          ),
+          
+          fluidRow(
+            # LEFT SIDEBAR
             
-            column(4,
+            column(12,
                    actionButton(ns("run_cleaning"), "Run Cleaning", 
                                 class = "btn-primary", 
                                 icon = icon("play"),
@@ -677,14 +680,14 @@ dataCleaningServer <- function(id) {
     
     # Preview other log
     output$other_log_preview <- renderDT({
-      req(input$other_log_file)
-      other <- readxl::read_xlsx(input$other_log_file$datapath, sheet = "cleaning_log")
+      req(input$fu_log_file)
+      other <- readxl::read_xlsx(input$fu_log_file$datapath, sheet = "cleaning_log_other")
       datatable(head(other, 100), options = list(scrollX = TRUE, pageLength = 10), rownames = FALSE)
     })
     
     # Run cleaning when button is clicked
     observeEvent(input$run_cleaning, {
-      req(input$kobo_file, input$raw_file, input$fu_log_file, input$other_log_file)
+      req(input$kobo_file, input$raw_file, input$fu_log_file)
       
       status_text("Starting cleaning process...")
       
@@ -709,7 +712,7 @@ dataCleaningServer <- function(id) {
         status_text("Reading data files...")
         raw_data_local <- read_xlsx(input$raw_file$datapath)
         fu_log_local <- readxl::read_xlsx(input$fu_log_file$datapath, sheet = "cleaning_log")
-        other_log_local <- readxl::read_xlsx(input$other_log_file$datapath, sheet = "cleaning_log")
+        other_log_local <- readxl::read_xlsx(input$fu_log_file$datapath, sheet = "cleaning_log_other")
         
         # Step 1: Apply FU cleaning
         status_text("Applying FU cleaning log...")

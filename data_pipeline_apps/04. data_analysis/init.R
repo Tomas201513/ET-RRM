@@ -10,7 +10,7 @@ analysisModuleUI <- function(id) {
       
       # ---------- Sub-tab 1: About ----------
       bslib::nav_panel(
-        title = "About",
+        title = "Info",
         icon = icon("info-circle"),
         p("This section allows you to perform data analysis using your KoboToolbox survey structure, cleaned dataset, and LOA file. Upload the required files and click 'Run Analysis' to generate results. You can preview the results in the table below and download them as an Excel file.")
         
