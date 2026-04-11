@@ -53,3 +53,7 @@ tests/output/
 # User uploads (temp)
 temp/
 
+
+Archive/
+www/
+WWW/
