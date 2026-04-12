@@ -76,7 +76,7 @@ analysisModuleUI <- function(id) {
               full_screen = FALSE,
               bslib::card_header(
                 # class = "bg-info text-white",
-                icon("upload"), "Upload & Settings"
+                "Preview"
               ),
               bslib::card_body(
               
