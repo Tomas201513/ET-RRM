@@ -22,32 +22,57 @@ mod_check_cleaning_log_ui <- function(id) {
         bslib::card_body(
 
           bslib::layout_columns(
-            col_widths = c(4, 4, 2, 2),
+            col_widths = c(6, 6),
             
             fileInput(
               ns("kobo_file"),
-              label = NULL,
+              label = "Kobo Form (.xlsx)",
               # corrected spelling
-              placeholder = "upload kobo xlsform...",
               accept = c(".xlsx", ".xls", ".xlsm")
             ),
             
             fileInput(
               ns("cl_file"),
-              label = NULL,
+              label = "Cleaning Log (.xlsx)",
               # corrected spelling
-              placeholder = "upload cleaning log file...",
               accept = c(".xlsx", ".xls", ".xlsm")
             )
             ,
-            actionButton(
-              ns("run_check"),
-              "Run Validation",
-              icon = icon("play"),
-              class = "btn-primary w-100"
+           
+          ),
+          bslib::layout_columns(
+            col_widths = c(6,6),
+            div(
+              style = "position: relative;",
+              
+              actionButton(
+                ns("run_check"),
+                "Run Validation",
+                icon = icon("play"),
+                class = "btn-success btn-sm flex-grow-1", 
+                style = "width: 100%; margin-bottom: 15px; font-size: 0.8rem; padding: 6px 3px;"),
+              
+              # Hidden spinner that appears during download
+              tags$div(
+                id = ns("runing_spinner"),
+                style = "position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); display: none;",
+                icon("spinner", class = "fa-spin fa-2x")
+              )
+            ),
+           
+            div(
+              style = "position: relative;",
+              
+              downloadButton(ns("download"), "Download Log",  class = "btn-primary btn-sm flex-grow-1", 
+                             style = "width: 100%; margin-bottom: 15px; font-size: 0.8rem; padding: 6px 3px;"),
+              # Hidden spinner that appears during download
+              tags$div(
+                id = ns("runing_spinner"),
+                style = "position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); display: none;",
+                icon("spinner", class = "fa-spin fa-2x")
+              )
             ),
             
-            downloadButton(ns("download_log"), "Download Log", class = "btn-success w-100")
             
           )
         )
@@ -94,6 +119,8 @@ mod_check_cleaning_log_server <- function(id) {
       validation_results = NULL
     )
     
+    shinyjs::disable("download")
+    
     # Observe file uploads and read data
     observeEvent(input$kobo_file, {
       req(input$kobo_file)
@@ -117,6 +144,13 @@ mod_check_cleaning_log_server <- function(id) {
       req(rv$survey_df, rv$choices_df, rv$cleaning_log_df)
       is_running(TRUE)   # ⬅️ START loading
 
+      
+      shinyjs::disable("run_check")
+      # shinyjs::show("runing_spinner")
+      session$sendCustomMessage("showDownloadLoading", list(
+        button_id = session$ns("run_check")
+      ))
+      
       print("Running validation...")
       tryCatch({
         rv$validation_results <- check_cleaning_log(
@@ -124,12 +158,23 @@ mod_check_cleaning_log_server <- function(id) {
           choices_df = rv$choices_df,
           cleaning_log_df = rv$cleaning_log_df
         )
+        
+        shinyjs::enable("run_check")
+        shinyjs::enable("download")
+        session$sendCustomMessage("hideDownloadLoading", list(button_id = ns("run_check")))
+        
         print("Validation completed successfully.")
         output$status <- renderUI({
           tags$p("Validation successful! No issues found.", class = "text-success")
         })
       }, error = function(e) {
         rv$validation_results <- data.frame(Error = e$message)
+        
+        shinyjs::enable("run_check")
+        shinyjs::enable("download")
+        session$sendCustomMessage("hideDownloadLoading", list(button_id = ns("run_check")))
+        
+        
         output$status <- renderUI({
           tags$p("Validation failed. See log for details.", class = "text-danger")
         })
@@ -139,11 +184,16 @@ mod_check_cleaning_log_server <- function(id) {
     
     
     # Download log
-    output$download_log <- downloadHandler(
+    output$download <- downloadHandler(
+      
       filename = function() {
         paste0("cleaning_log_validation_", Sys.Date(), ".xlsx")
       },
       content = function(file) {
+        
+        shinyjs::enable("download")
+        session$sendCustomMessage("showDownloadLoading", list(button_id = ns("download")))
+        
         res <-  rv$validation_results
         if (is.null(res)) return(NULL)
         
@@ -208,6 +258,8 @@ mod_check_cleaning_log_server <- function(id) {
         )
         
         openxlsx::saveWorkbook(wb, file, overwrite = TRUE)
+        session$sendCustomMessage("hideDownloadLoading", list(button_id = ns("download")))
+        
       }
     )
     

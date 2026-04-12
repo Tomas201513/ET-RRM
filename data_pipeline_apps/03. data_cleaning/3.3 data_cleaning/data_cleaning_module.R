@@ -8,7 +8,6 @@ dataCleaningUI <- function(id) {
   ns <- NS(id)
   
   tagList(
-    add_loading_js(),
     fluidRow(
     bslib::card(
       full_screen = FALSE,
@@ -16,8 +15,8 @@ dataCleaningUI <- function(id) {
         # class = "bg-info text-white",
         icon("upload"), "Upload & Settings"
       ),
-      bslib::card(
-        style = "height: 100%;",
+      # bslib::card(
+      #   style = "height: 100%;",
         
         bslib::card_body(
           style = "height: 100%;",
@@ -26,41 +25,63 @@ dataCleaningUI <- function(id) {
             # LEFT SIDEBAR
             column(4,
                    fileInput(ns("kobo_file"), "Kobo Form (.xlsx)", 
-                             accept = c(".xlsx", ".xls"))
+                             accept = c(".xlsx", ".xls"),width = "100%")
             ),
             
             column(4,
                    fileInput(ns("raw_file"), "Raw Data (.xlsx)", 
-                             accept = c(".xlsx", ".xls"))
+                             accept = c(".xlsx", ".xls"),width = "100%")
             ),
             
             column(4,
                    fileInput(ns("fu_log_file"), "Cleaning Log (.xlsx)", 
-                             accept = c(".xlsx", ".xls"))
+                             accept = c(".xlsx", ".xls"),width = "100%")
             )
           ),
           
           fluidRow(
             # LEFT SIDEBAR
             
-            column(12,
-                   actionButton(ns("run_cleaning"), "Run Cleaning", 
-                                class = "btn-primary", 
-                                icon = icon("play"),
-                                width = "100%"),
+            bslib::layout_columns(
+              col_widths = c(6,6),
+              
+              div(
+                style = "position: relative;",
+                
+                actionButton(ns("run_cleaning"), "Run Cleaning", 
+                             icon = icon("play"),
+                             class = "btn-success btn-sm flex-grow-1", 
+                             style = "width: 100%; margin-bottom: 15px; font-size: 0.8rem; padding: 6px 3px;"),
+                
+                # Hidden spinner that appears during download
+                tags$div(
+                  id = ns("runing_spinner"),
+                  style = "position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); display: none;",
+                  icon("spinner", class = "fa-spin fa-2x")
+                )
+              ),
+              
+              div(
+                style = "position: relative;",
+                
+                  downloadButton(ns("download"), "Download Cleaned Data", 
+                                 icon = icon("download"),
+                                 class = "btn-primary btn-sm flex-grow-1", 
+                                 style = "width: 100%; margin-bottom: 15px; font-size: 0.8rem; padding: 6px 3px;"),
+                # Hidden spinner that appears during download
+                tags$div(
+                  id = ns("runing_spinner"),
+                  style = "position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); display: none;",
+                  icon("spinner", class = "fa-spin fa-2x")
+                )
+              ),
+                  
                    
-                   hr(),
                    
-                   conditionalPanel(
-                     condition = paste0("output['", ns("cleaned_data_ready"), "']"),
-                     downloadButton(ns("download_cleaned"), "Download Cleaned Data", 
-                                    class = "btn-success",
-                                    icon = icon("download"),
-                                    width = "100%")
-                   )
+                  
             )
           )
-        )
+        # )
       ))
           ),
           
@@ -102,6 +123,7 @@ dataCleaningUI <- function(id) {
 dataCleaningServer <- function(id) {
   moduleServer(id, function(input, output, session) {
     ns <- session$ns
+    shinyjs::disable("download")
     
     # Reactive values for status
     status_text <- reactiveVal("Waiting for file uploads...")
@@ -691,6 +713,11 @@ dataCleaningServer <- function(id) {
       
       status_text("Starting cleaning process...")
       
+      shinyjs::disable("run_cleaning")
+      # shinyjs::show("runing_spinner")
+      session$sendCustomMessage("showDownloadLoading", list(
+        button_id = session$ns("run_cleaning")
+      ))
       tryCatch({
         # Read Kobo files
         status_text("Reading Kobo form...")
@@ -787,6 +814,9 @@ dataCleaningServer <- function(id) {
         )
         
         cleaned_result_reactive(result)
+        shinyjs::enable("run_cleaning")
+        shinyjs::enable("download")
+        session$sendCustomMessage("hideDownloadLoading", list(button_id = ns("run_cleaning")))
         
         status_text(paste(
           "✓ Cleaning complete! Final rows:", nrow(result$cleaned_data),
@@ -808,6 +838,10 @@ dataCleaningServer <- function(id) {
         })
         
       }, error = function(e) {
+        
+        shinyjs::enable("run_cleaning")
+        shinyjs::enable("download")
+        session$sendCustomMessage("hideDownloadLoading", list(button_id = ns("run_cleaning")))
         status_text(paste("✗ Error:", e$message))
         cleaned_result_reactive(NULL)
       })
@@ -827,13 +861,13 @@ dataCleaningServer <- function(id) {
     })
     
     # Check if cleaned data is ready for download
-    output$cleaned_data_ready <- reactive({
-      !is.null(cleaned_result_reactive()) && !is.null(cleaned_result_reactive()$cleaned_data)
-    })
-    outputOptions(output, "cleaned_data_ready", suspendWhenHidden = FALSE)
-    
+    # output$cleaned_data_ready <- reactive({
+    #   !is.null(cleaned_result_reactive()) && !is.null(cleaned_result_reactive()$cleaned_data)
+    # })
+    # outputOptions(output, "cleaned_data_ready", suspendWhenHidden = FALSE)
+    # 
     # Download handler
-    output$download_cleaned <- downloadHandler(
+    output$download <- downloadHandler(
       filename = function() {
         paste0("cleaned_data_", Sys.Date(), ".xlsx")
       },
@@ -848,5 +882,6 @@ dataCleaningServer <- function(id) {
         )
       }
     )
+    
   })
 }

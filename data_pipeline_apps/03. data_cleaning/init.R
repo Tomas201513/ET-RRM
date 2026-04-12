@@ -18,13 +18,11 @@ data_cleaningModuleUI <- function(id) {
     nav_panel(
       title = "Generate Cleaning Log",
       icon = icon("file-alt"),
-      add_loading_js(),
       mod_cleaning_log_generator_ui("cleaning_log")
     ),
     nav_panel(
       title = "Validate Cleaning Log",
       icon = icon("file-alt"),
-      add_loading_js(),
       mod_check_cleaning_log_ui("check_cleaning_log")
     ),
     
@@ -33,7 +31,6 @@ data_cleaningModuleUI <- function(id) {
     nav_panel(
       title = "Data cleaning tools",
       icon = icon("file-alt"),
-      add_loading_js(),
       dataCleaningUI("cleaning_module")
     )
   )

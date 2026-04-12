@@ -94,21 +94,22 @@ mod_cleaning_log_generator_ui <- function(id) {
             col_widths = c(6, 6),
             
             # Raw Data
-            div(class = "sidebar-card",
-                div(span(class = "step-badge", "1"),
-                    span(class = "step-title", "Raw Dataset")),
-                hr(),
-                fileInput(ns("raw_file"), NULL, accept = c(".xlsx", ".xls"), width = "100%"),
+            div(
+                # div(span(class = "step-badge", "1"),
+                #     span(class = "step-title", "Raw Dataset")),
+                # hr(),
+                fileInput(ns("raw_file"), "Raw Data (.xlsx)", accept = c(".xlsx", ".xls"), width = "100%"),
                 uiOutput(ns("raw_info")),
                 uiOutput(ns("uuid_input_ui"))
             ),
             
             # Kobo
-            div(class = "sidebar-card",
-                div(span(class = "step-badge", "2"),
-                    span(class = "step-title", "KoBo Form")),
-                hr(),
-                fileInput(ns("kobo_file"), NULL, accept = c(".xlsx", ".xls"), width = "100%"),
+            div(
+              # class = "sidebar-card",
+              #   div(span(class = "step-badge", "2"),
+              #       span(class = "step-title", "KoBo Form")),
+              #   hr(),
+                fileInput(ns("kobo_file"), "Kobo Form (.xlsx)", accept = c(".xlsx", ".xls"), width = "100%"),
                 uiOutput(ns("kobo_info"))
             )
           )
@@ -194,13 +195,37 @@ mod_cleaning_log_generator_ui <- function(id) {
         bslib::card_header(icon("play"), "Run Checks"),
         
         bslib::card_body(
-          div(class = "sidebar-card",
-              actionButton(ns("run_btn"), "▶ Run Cleaning Checks", class = "btn-run"),
-              br(),
-              uiOutput(ns("dl_buttons")),
-              br(),
+          # div(class = "sidebar-card",
+          bslib::layout_columns(
+            col_widths = c(6, 6),
+          div(
+            style = "position: relative;",
+           
+              actionButton(ns("run_btn"), "Generate Cleaning Log", class = "btn-success btn-sm flex-grow-1", 
+                           style = "width: 100%; margin-bottom: 15px; font-size: 0.8rem; padding: 6px 3px;"),
+            # Hidden spinner that appears during download
+            tags$div(
+              id = ns("runing_spinner"),
+              style = "position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); display: none;",
+              icon("spinner", class = "fa-spin fa-2x")
+            )
+          ),
+          
+          div(
+            style = "position: relative;",
+            
+            actionButton(ns("download"), "Download Cleaning Log",
+                         class = "btn-primary btn-sm flex-grow-1",
+                         style = "width: 100%; margin-bottom: 15px; font-size: 0.8rem; padding: 6px 3px;"),
+            tags$div(
+              id = ns("runing_spinner"),
+              style = "position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); display: none;",
+              icon("spinner", class = "fa-spin fa-2x")
+                )
+              )
+            ),
               uiOutput(ns("summary_row"))
-          )
+          # )
         )
       )
     ),
@@ -263,6 +288,9 @@ mod_cleaning_log_generator_server <- function(id) {
       cols_numeric = character(0),
       info_cols = character(0)
     )
+    
+    
+    shinyjs::disable("download")
     
     out_date <- stringr::str_sub(stringr::str_remove_all(Sys.Date(), "-"), 3)
     cl_path  <<- file.path(paste0("cleaning_log_", out_date, ".xlsx"))
@@ -537,6 +565,11 @@ mod_cleaning_log_generator_server <- function(id) {
       rv$others  <- NULL
       rv$log     <- character(0)
       shinyjs::disable("run_btn")
+      # shinyjs::show("runing_spinner")
+      session$sendCustomMessage("showDownloadLoading", list(
+        button_id = session$ns("run_btn")
+      ))
+
       
       tryCatch({
         kobo_survey  <- rv$kobo_s
@@ -873,7 +906,11 @@ mod_cleaning_log_generator_server <- function(id) {
         
         rv$ready <- TRUE
         rv$running <- FALSE
+
         shinyjs::enable("run_btn")
+        shinyjs::enable("download")
+        session$sendCustomMessage("hideDownloadLoading", list(button_id = ns("run_btn")))
+        
         log_msg("Ready — click a download button to save outputs.",
                 "success")
         showNotification(
@@ -883,6 +920,8 @@ mod_cleaning_log_generator_server <- function(id) {
         )
         
       }, error = function(e) {
+        session$sendCustomMessage("hideDownloadLoading", list(button_id = ns("run_btn")))
+        
         log_msg(paste("FATAL ERROR:", e$message), "error")
         rv$running <- FALSE
         shinyjs::enable("run_btn")
@@ -894,62 +933,56 @@ mod_cleaning_log_generator_server <- function(id) {
     
     # Summary row
     output$summary_row <- renderUI({
-      if (!rv$ready)
-        return(NULL)
+      if (!rv$ready) return(NULL)
+      
       cl <- rv$cl
-      n_issues <- if (!is.null(cl))
-        nrow(cl)
-      else
-        0
-      n_oth <- if (!is.null(rv$others) &&
-                   nrow(rv$others) > 0)
-        nrow(rv$others)
-      else
-        0
       
-      fluidRow(
+      n_issues <- if (!is.null(cl)) nrow(cl) else 0
+      n_oth    <- if (!is.null(rv$others) && nrow(rv$others) > 0) nrow(rv$others) else 0
+      n_uuid   <- if (!is.null(cl) && "uuid" %in% names(cl)) dplyr::n_distinct(cl$uuid) else "—"
+      
+      div(
+        style = "
+      width: 100%;
+      background: #f8f9fa;
+      border: 1px solid #dee2e6;
+      border-radius: 6px;
+      padding: 8px 12px;
+      font-size: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    ",
         
-      column(4, div(
-        class = "summary-card",
-        div(class = "metric-num", n_issues),
-        div(class = "metric-lbl", "Total Issues")
-      )), 
-      
-      column(4, div(
-        class = "summary-card",
-        div(class = "metric-num", n_oth),
-        div(class = "metric-lbl", "Other Responses")
-      )),
-      
-      column(4, div(
-        class = "summary-card",
-        div(class = "metric-num", if (!is.null(cl) &&
-                                      "uuid" %in% names(cl))
-          n_distinct(cl$uuid)
-          else
-            "—"),
-        div(class = "metric-lbl", "UUIDs Flagged")
-      ))
+        span(strong("Common Follw-up Issues:"), paste0(" ", n_issues)),
+        span(strong("Other Responses:"), paste0(" ", n_oth))
+        ,
+        span(strong("Survey Flagged:"), paste0(" ", n_uuid))
       )
     })
-    
-    # Download buttons
-    output$dl_buttons <- renderUI({
-      if (!rv$ready)
-        return(NULL)
-      tagList(
-        div(
-          style = "margin-top:10px;",
-          actionButton(ns("save_cl"), "💾 Save Cleaning Log", class = "btn-dl")
-        )
-        )
-    })
-    
+    # # Download buttons
+    # output$dl_buttons <- renderUI({
+    #   if (!rv$ready)
+    #     return(NULL)
+    #   tagList(
+    #     div(
+    #       style = "margin-top:10px;",
+    #       actionButton(ns("download"), "💾 Save Cleaning Log", class = "btn-dl")
+    #     )
+    #     )
+    # })
+    # 
     # Save cleaning log
-    observeEvent(input$save_cl, {
+    observeEvent(input$download, {
       req(rv$combined_obj, rv$kobo_s, rv$kobo_c, rv$other_db)
     # ____________ Common follow-up log ________________________________________
       log_msg("Creating common follow-up log...")
+      
+      session$sendCustomMessage("showDownloadLoading", list(
+        button_id = session$ns("download")
+      ))
+      shinyjs::disable("download")
+      
       tryCatch({
         wb_cl <<- custom_create_xlsx_cleaning_log(
           rv$combined_obj,
@@ -982,6 +1015,9 @@ mod_cleaning_log_generator_server <- function(id) {
         }, error = function(e)
           NULL)
         
+        session$sendCustomMessage("hideDownloadLoading", list(button_id = ns("download")))
+        shinyjs::enable("download")
+        
         showNotification(paste("✅ Saved:", basename(cl_path)),
                          type = "message",
                          duration = 4)
@@ -1000,6 +1036,9 @@ mod_cleaning_log_generator_server <- function(id) {
         showNotification(paste("✅ Saved:", basename(cl_path)),
                          type = "message",
                          duration = 4)
+        
+        session$sendCustomMessage("hideDownloadLoading", list(button_id = ns("download")))
+        shinyjs::enable("download")
       })
       rv$cl_path <- cl_path
       
@@ -1526,19 +1565,3 @@ mod_cleaning_log_generator_server <- function(id) {
   })
 }
 
-# Function to add loading JS (include in your main app)
-add_loading_js <- function() {
-  tags$script(
-    HTML(
-      "
-    $(document).on('shiny:connected', function() {
-      var loading = $('<div id=\"loading-overlay\"><div class=\"spinner\"></div><p>Loading...</p></div>');
-      $('body').append(loading);
-      $(document).on('shiny:disconnected', function() {
-        $('#loading-overlay').fadeOut();
-      });
-    });
-  "
-    )
-  )
-}

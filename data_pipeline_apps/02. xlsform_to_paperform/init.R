@@ -355,7 +355,9 @@ mod_paper_form_generator_server <- function(id) {
       
       # Disable generate button
       shinyjs::disable("generate")
-      
+      session$sendCustomMessage("showDownloadLoading", list(
+        button_id = session$ns("generate")
+      ))
       # Use withProgress for generation progress
       withProgress(message = "Generating Paper Form", value = 0, {
         
@@ -594,7 +596,11 @@ mod_paper_form_generator_server <- function(id) {
           
           # Complete
           setProgress(value = 1, detail = "Complete!")
-          
+
+          shinyjs::enable("generate")
+          session$sendCustomMessage("hideDownloadLoading", list(button_id = ns("generate")))
+          session$sendCustomMessage("hideDownloadProgress", list())
+        
           showNotification(
             paste("✅ SUCCESS! Form generated with", nrow(values$paperForm), "questions.\n📄 Ready for download."),
             type = "message",
@@ -606,6 +612,11 @@ mod_paper_form_generator_server <- function(id) {
           })
           
         }, error = function(e) {
+          shinyjs::enable("generate")
+          session$sendCustomMessage("hideDownloadLoading", list(button_id = ns("generate")))
+          session$sendCustomMessage("hideDownloadProgress", list())
+          
+          
           showNotification(
             paste("Error generating form:", e$message),
             type = "error",
@@ -617,8 +628,7 @@ mod_paper_form_generator_server <- function(id) {
         })
       })
       
-      # Re-enable generate button after completion
-      shinyjs::enable("generate")
+
     })
     
     # Download handler with loading state
@@ -664,6 +674,8 @@ mod_paper_form_generator_server <- function(id) {
       },
       contentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
+    
+    
     output$download_admin <- downloadHandler(
       filename = function() {
         paste0("admin_list.xlsx")
@@ -762,49 +774,4 @@ create_admin_hierarchy <- function(choices_df) {
     )
   
   return(admin_full)
-}
-
-# Add JavaScript for loading states
-# Add this to your app's UI or in a separate JavaScript file
-add_loading_js <- function() {
-  tags$script(HTML("
-    Shiny.addCustomMessageHandler('showDownloadLoading', function(message) {
-      var buttonId = message.button_id;
-      var button = $('#' + buttonId);
-      var originalText = button.html();
-      button.data('original-text', originalText);
-      button.html('<i class=\\'fa fa-spinner fa-spin\\'></i> Saving...');
-      button.prop('disabled', true);
-    });
-    
-    Shiny.addCustomMessageHandler('hideDownloadLoading', function(message) {
-      var buttonId = message.button_id;
-      var button = $('#' + buttonId);
-      var originalText = button.data('original-text');
-      if (originalText) {
-        button.html(originalText);
-      } else {
-        button.html('Download Excel Form');
-      }
-      button.prop('disabled', false);
-    });
-    
-    Shiny.addCustomMessageHandler('updateDownloadProgress', function(message) {
-      var percent = message.percent;
-      $('#progress_bar').css('width', percent + '%').attr('aria-valuenow', percent);
-      $('#progress_bar').html(Math.round(percent) + '%');
-      if (percent === 0 || percent === 100) {
-        setTimeout(function() {
-          $('#progress_container').hide();
-        }, 1000);
-      } else {
-        $('#progress_container').show();
-      }
-    });
-    
-    Shiny.addCustomMessageHandler('hideDownloadProgress', function(message) {
-      $('#progress_container').hide();
-      $('#progress_bar').css('width', '0%').html('0%');
-    });
-  "))
 }

@@ -77,14 +77,14 @@ ui <- bslib::page_navbar(
   theme = theme,
   tags$head(
     tags$meta(name = "viewport", content = "width=device-width, initial-scale=1.0"),
-    tags$link(rel = "stylesheet", type = "text/css", href = "style.css")
+    tags$link(rel = "stylesheet", type = "text/css", href = "style.css"),
+    tags$script(src = "loading.js")
   ),
   
   # ==================== MAIN TAB 1: XLS Validator ====================
   bslib::nav_panel(
     title = "XLS Validator",
     icon = icon("check-circle"),
-    add_loading_js(),
     xlsform_validatorModuleUI("validator")
   ),
   
@@ -93,7 +93,6 @@ ui <- bslib::page_navbar(
   bslib::nav_panel(
     title = "Paper Form Generator",
     icon = icon("file-alt"),
-    add_loading_js(),
     mod_paper_form_generator_ui("paper_form")
   ),
   
@@ -101,7 +100,6 @@ ui <- bslib::page_navbar(
   bslib::nav_panel(
     title = "Data Quality",
     icon = icon("chart-bar"),
-    add_loading_js(),
     data_cleaningModuleUI("cleaning_module")
   ),
   
@@ -109,7 +107,6 @@ ui <- bslib::page_navbar(
   bslib::nav_panel(
     title = "Data Analysis",
     icon = icon("chart-line"),
-    add_loading_js(),
     analysisModuleUI("analysis1")
   ),
   
@@ -139,3 +136,4 @@ server <- function(input, output, session) {
 
 # Run the application
 shiny::shinyApp(ui = ui, server = server)
+

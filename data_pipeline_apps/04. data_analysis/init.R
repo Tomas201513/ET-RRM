@@ -17,6 +17,22 @@ analysisModuleUI <- function(id) {
       ),
       nav_panel(
         title = "Run Analysis",
+        
+        
+        
+        bslib::card(
+          full_screen = FALSE,
+          bslib::card_header(
+            # class = "bg-info text-white",
+            icon("upload"), "Upload & Settings"
+          ),
+          # bslib::card(
+          #   style = "height: 100%;",
+          
+          bslib::card_body(
+            style = "height: 100%;",
+            
+            
         fluidRow(
           column(
             4,
@@ -36,22 +52,19 @@ analysisModuleUI <- function(id) {
           # LEFT SIDEBAR
           column(
             6,
-        actionButton(ns("run"), "Run Analysis", class = "btn-primary btn-sm flex-grow-1",
+        actionButton(ns("run"), "Run Analysis", class = "btn-success btn-sm flex-grow-1",
                      style = "width: 100%; margin-bottom: 15px; font-size: 0.8rem; padding: 6px 3px;")
         
           )
         ,
         column(
           6,
-        downloadButton(ns("download_results"), "Download Results", class = "btn-primary btn-sm flex-grow-1",
+        downloadButton(ns("download"), "Download Results", class = "btn-primary btn-sm flex-grow-1",
                        style = "width: 100%; margin-bottom: 15px; font-size: 0.8rem; padding: 6px 3px;")
-        )
-          
-        
-        
-        )
-        ,
-        
+              )
+            )
+          )
+        ),
         
         fluidRow(
           # LEFT SIDEBAR
@@ -81,6 +94,12 @@ analysisModuleServer <- function(id) {
     
     results_data <- eventReactive(input$run, {
       req(input$kobo_tool, input$dataset, input$loa)
+      
+      shinyjs::disable("run")
+      # shinyjs::show("runing_spinner")
+      session$sendCustomMessage("showDownloadLoading", list(
+        button_id = session$ns("run")
+      ))
       
       # Read Kobo
       tool_survey <- read_excel(input$kobo_tool$datapath, sheet = "survey", col_types = "text") %>% 
@@ -167,20 +186,31 @@ analysisModuleServer <- function(id) {
       #   )
       
       return(label_results)
+      
+      shinyjs::enable("run")
+      # shinyjs::show("runing_spinner")
+      session$sendCustomMessage("hideDownloadLoading", list(
+        button_id = session$ns("run")
+      ))
     })
     
     output$results_preview <- renderTable({
       head(results_data(), 5)
     })
     
-    output$download_results <- downloadHandler(
+    output$download <- downloadHandler(
       filename = function() {
         paste0("analysis_results_", Sys.Date(), ".xlsx")
       },
       content = function(file) {
         write.xlsx(results_data(), file)
         # writexl::write_xlsx(results_data(), file)
+        
+        
       }
+      
+     
+      
     )
     
   })
